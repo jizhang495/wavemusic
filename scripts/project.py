@@ -9,6 +9,9 @@ ALLOWED_WAVEFORMS = ("triangle", "sine", "square", "sawtooth")
 DEFAULT_WAVEFORM = "triangle"
 DEFAULT_BPM = 100
 DEFAULT_SAMPLE_RATE = 44100
+DEFAULT_TITLE = "untitled"
+DEFAULT_KEY = "c major"
+DEFAULT_TIME_SIGNATURE = "4/4"
 PART_COUNT = 4
 
 
@@ -58,7 +61,11 @@ def part_score_text(part: Any) -> str:
     return score_text(_field(part, "score", ""))
 
 
-def normalize_project(raw_project: Any) -> dict[str, Any]:
+def normalize_project(
+    raw_project: Any,
+    *,
+    fallback_title: str = DEFAULT_TITLE,
+) -> dict[str, Any]:
     if not isinstance(raw_project, Mapping):
         raise ValueError("Music JSON must be an object.")
 
@@ -85,7 +92,17 @@ def normalize_project(raw_project: Any) -> dict[str, Any]:
             }
         )
 
+    title = str(raw_project.get("title") or fallback_title).strip() or DEFAULT_TITLE
+    key = str(raw_project.get("key") or DEFAULT_KEY).strip() or DEFAULT_KEY
+    time_signature = (
+        str(raw_project.get("time_signature") or DEFAULT_TIME_SIGNATURE).strip()
+        or DEFAULT_TIME_SIGNATURE
+    )
+
     return {
+        "title": title,
+        "key": key,
+        "time_signature": time_signature,
         "bpm": clamp_int(
             raw_project.get("bpm"),
             default=DEFAULT_BPM,
@@ -107,7 +124,7 @@ def load_project(path: Path) -> dict[str, Any]:
         raw_project = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise ValueError(f"Invalid music JSON: {exc}") from exc
-    return normalize_project(raw_project)
+    return normalize_project(raw_project, fallback_title=path.stem)
 
 
 def compose_score(parts: Sequence[Any]) -> str:

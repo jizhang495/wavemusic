@@ -31,6 +31,9 @@ WaveMusic stores projects as JSON files in `sheets/`:
 
 ```json
 {
+  "title": "summer's end",
+  "key": "e major",
+  "time_signature": "4/4",
   "bpm": 100,
   "sample_rate": 44100,
   "parts": [

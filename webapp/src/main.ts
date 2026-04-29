@@ -15,12 +15,18 @@ interface ProjectPartPayload {
 }
 
 interface MusicProject {
+  title: string;
+  key: string;
+  time_signature: string;
   bpm: number;
   sample_rate: number;
   parts: ProjectPartPayload[];
 }
 
 interface RenderRequest {
+  title: string;
+  key: string;
+  time_signature: string;
   parts: PartPayload[];
   filename: string;
   sample_rate: number;
@@ -44,6 +50,9 @@ interface RenderResponse {
 
 interface ScorePayload {
   filename: string;
+  title: string;
+  key: string;
+  time_signature: string;
   bpm: number;
   sample_rate: number;
   parts: PartPayload[];
@@ -78,7 +87,6 @@ if (!app) {
 
 const partRefs: ElementRef[] = [];
 const state = {
-  outputFilename: "m.wav",
   selectedSheet: "",
   activePartIndex: 0,
   partEditorHeight: 300,
@@ -110,15 +118,9 @@ container.innerHTML = `
   </section>
   <section class="toolbar settings-row">
     <label>
-      <span>Save filename</span>
-      <input id="save-filename" value="untitled.json" placeholder="untitled.json" />
+      <span>Title</span>
+      <input id="title-input" value="untitled" placeholder="untitled" />
     </label>
-    <button id="save-sheet" type="button">Save score</button>
-    <label>
-      <span>Output WAV filename</span>
-      <input id="output-filename" value="m.wav" placeholder="m.wav" />
-    </label>
-    <button id="save-wav" type="button">Save WAV</button>
     <label>
       <span>BPM</span>
       <input id="bpm-input" type="number" min="20" max="300" value="100" />
@@ -127,6 +129,16 @@ container.innerHTML = `
       <span>Sample Rate</span>
       <input id="sample-rate" type="number" min="8000" max="96000" step="1000" value="44100" />
     </label>
+    <label>
+      <span>Key</span>
+      <input id="key-input" value="c major" placeholder="c major" />
+    </label>
+    <label>
+      <span>Time Signature</span>
+      <input id="time-signature-input" value="4/4" placeholder="4/4" />
+    </label>
+    <button id="save-sheet" type="button">Save score</button>
+    <button id="save-wav" type="button">Save WAV</button>
   </section>
   <section class="parts" id="parts"></section>
   <section class="playback-bar">
@@ -138,11 +150,12 @@ container.innerHTML = `
 app.appendChild(container);
 
 const statusElement = app.querySelector<HTMLElement>("#status")!;
-const outputFilenameElement = app.querySelector<HTMLInputElement>("#output-filename")!;
 const sheetSelect = app.querySelector<HTMLSelectElement>("#sheet-select")!;
+const titleElement = app.querySelector<HTMLInputElement>("#title-input")!;
 const bpmElement = app.querySelector<HTMLInputElement>("#bpm-input")!;
 const sampleRateElement = app.querySelector<HTMLInputElement>("#sample-rate")!;
-const saveFilenameElement = app.querySelector<HTMLInputElement>("#save-filename")!;
+const keyElement = app.querySelector<HTMLInputElement>("#key-input")!;
+const timeSignatureElement = app.querySelector<HTMLInputElement>("#time-signature-input")!;
 const audioPlayer = app.querySelector<HTMLAudioElement>("#audio-player")!;
 const loadButton = app.querySelector<HTMLButtonElement>("#load-sheet")!;
 const localScoreButton = app.querySelector<HTMLButtonElement>("#load-local-score")!;
@@ -202,6 +215,9 @@ function scoreText(value: unknown): string {
 
 function buildProject(): MusicProject {
   return {
+    title: titleText(),
+    key: keyElement.value.trim() || "c major",
+    time_signature: timeSignatureElement.value.trim() || "4/4",
     bpm: clampBpm(Number(bpmElement.value)),
     sample_rate: clampSampleRate(Number(sampleRateElement.value)),
     parts: partRefs.map((ref, index) => ({
@@ -212,11 +228,28 @@ function buildProject(): MusicProject {
   };
 }
 
-function ensureExtension(filename: string, extension: string): string {
-  const trimmed = filename.trim();
-  const fallback = `untitled${extension}`;
-  const safeName = trimmed || fallback;
-  return safeName.toLowerCase().endsWith(extension) ? safeName : `${safeName}${extension}`;
+function stripExtension(filename: string, extension: string): string {
+  return filename.toLowerCase().endsWith(extension)
+    ? filename.slice(0, -extension.length)
+    : filename;
+}
+
+function titleText(): string {
+  return titleElement.value.trim() || "untitled";
+}
+
+function filenameStemFromTitle(title: string): string {
+  const stem = title
+    .trim()
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return stem || "untitled";
+}
+
+function filenameFromTitle(extension: string): string {
+  return `${filenameStemFromTitle(titleText())}${extension}`;
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -250,10 +283,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function normalizeProject(rawProject: unknown): Omit<ScorePayload, "filename"> {
+function normalizeProject(
+  rawProject: unknown,
+  fallbackTitle = "untitled",
+): Omit<ScorePayload, "filename"> {
   if (!isRecord(rawProject)) {
     throw new Error("Music JSON must be an object.");
   }
+
+  const title =
+    typeof rawProject.title === "string" && rawProject.title.trim()
+      ? rawProject.title.trim()
+      : fallbackTitle;
+  const key =
+    typeof rawProject.key === "string" && rawProject.key.trim()
+      ? rawProject.key.trim()
+      : "c major";
+  const timeSignature =
+    typeof rawProject.time_signature === "string" && rawProject.time_signature.trim()
+      ? rawProject.time_signature.trim()
+      : "4/4";
 
   const rawParts = Array.isArray(rawProject.parts) ? rawProject.parts : [];
   const parts: PartPayload[] = [];
@@ -270,6 +319,9 @@ function normalizeProject(rawProject: unknown): Omit<ScorePayload, "filename"> {
   }
 
   return {
+    title,
+    key,
+    time_signature: timeSignature,
     bpm: clampBpm(Number(rawProject.bpm)),
     sample_rate: clampSampleRate(Number(rawProject.sample_rate)),
     parts,
@@ -277,6 +329,9 @@ function normalizeProject(rawProject: unknown): Omit<ScorePayload, "filename"> {
 }
 
 function applyProject(project: Omit<ScorePayload, "filename">) {
+  titleElement.value = project.title || "untitled";
+  keyElement.value = project.key || "c major";
+  timeSignatureElement.value = project.time_signature || "4/4";
   bpmElement.value = String(clampBpm(project.bpm));
   sampleRateElement.value = String(clampSampleRate(project.sample_rate));
 
@@ -298,8 +353,11 @@ function applyProject(project: Omit<ScorePayload, "filename">) {
 
 function getPayload(): RenderRequest {
   return {
+    title: titleText(),
+    key: keyElement.value.trim() || "c major",
+    time_signature: timeSignatureElement.value.trim() || "4/4",
     parts: partPayloads(),
-    filename: outputFilenameElement.value || "m.wav",
+    filename: filenameFromTitle(".wav"),
     sample_rate: clampSampleRate(Number(sampleRateElement.value)),
     bpm: clampBpm(Number(bpmElement.value)),
     use_cpp: true,
@@ -368,7 +426,7 @@ async function refreshSheets() {
   files.forEach((filename) => {
     const option = document.createElement("option");
     option.value = filename;
-    option.textContent = filename;
+    option.textContent = stripExtension(filename, ".json");
     sheetSelect.appendChild(option);
   });
   setStatus(`Loaded ${files.length} sample score(s).`);
@@ -384,7 +442,6 @@ async function loadSheet() {
   );
   applyProject(data);
   state.selectedSheet = data.filename;
-  saveFilenameElement.value = data.filename;
   setStatus(`Loaded sample ${data.filename}`);
 }
 
@@ -399,9 +456,11 @@ async function loadLocalScore() {
     return;
   }
 
-  const project = normalizeProject(JSON.parse(await file.text()));
+  const project = normalizeProject(
+    JSON.parse(await file.text()),
+    stripExtension(file.name, ".json"),
+  );
   applyProject(project);
-  saveFilenameElement.value = file.name;
   state.selectedSheet = file.name;
   sheetSelect.value = "";
   localScoreFileInput.value = "";
@@ -409,7 +468,7 @@ async function loadLocalScore() {
 }
 
 async function saveSheet() {
-  const filename = ensureExtension(saveFilenameElement.value, ".json");
+  const filename = filenameFromTitle(".json");
   const blob = new Blob(
     [`${JSON.stringify(buildProject(), null, 2)}\n`],
     { type: "application/json;charset=utf-8" },
@@ -423,14 +482,13 @@ async function renderWav() {
   const response = await apiPost<RenderResponse>("/api/render", payload);
   audioPlayer.src = audioUrlWithCache(response.audio_url);
   audioPlayer.play().catch(() => {});
-  state.outputFilename = response.filename;
   setStatus(`Rendered ${response.filename}`);
 }
 
 async function saveWav() {
   const payload = getPayload();
   const response = await apiPost<RenderResponse>("/api/render", payload);
-  const filename = ensureExtension(outputFilenameElement.value || response.filename, ".wav");
+  const filename = filenameFromTitle(".wav");
   const audioUrl = audioUrlWithCache(response.audio_url);
   audioPlayer.src = audioUrl;
   const audioResponse = await fetch(audioUrl);
@@ -438,7 +496,6 @@ async function saveWav() {
     throw new Error(`Failed to download WAV: ${audioResponse.statusText}`);
   }
   downloadBlob(await audioResponse.blob(), filename);
-  state.outputFilename = response.filename;
   setStatus(`Saved ${filename} to local`);
 }
 
