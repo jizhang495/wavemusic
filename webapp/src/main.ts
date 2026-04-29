@@ -62,53 +62,52 @@ const state = {
   outputFilename: "m.wav",
   selectedSheet: "",
   activePartIndex: 0,
+  partEditorHeight: 300,
 };
 
 const container = document.createElement("div");
 container.innerHTML = `
-  <h1 class="title">WaveMusic Web</h1>
-  <p class="subtitle">Create scores, save/load files, and render WAV audio from your browser.</p>
-  <section class="toolbar">
-    <label>
-      <span>Output WAV filename</span>
-      <input id="output-filename" value="m.wav" placeholder="m.wav" />
-    </label>
+  <h1 class="title">WaveMusic</h1>
+  <p class="subtitle">Create scores and render WAV audio.</p>
+  <section class="toolbar score-row">
     <label>
       <span>Load score</span>
       <select id="sheet-select">
         <option value="">Select score</option>
       </select>
     </label>
+    <button id="load-sheet" type="button">Load selected score</button>
+    <button id="refresh-sheets" type="button">Refresh score list</button>
+    <div class="status-field">
+      <span>Status</span>
+      <span id="status" class="status">Idle</span>
+    </div>
+  </section>
+  <section class="toolbar settings-row">
+    <label>
+      <span>Save filename</span>
+      <input id="save-filename" value="untitled.wmusic" placeholder="untitled.wmusic" />
+    </label>
+    <button id="save-sheet" type="button">Save score</button>
+    <label>
+      <span>Output WAV filename</span>
+      <input id="output-filename" value="m.wav" placeholder="m.wav" />
+    </label>
     <label>
       <span>BPM</span>
       <input id="bpm-input" type="number" min="20" max="300" value="100" />
     </label>
     <label>
-      <span>Sample rate</span>
+      <span>Sample Rate</span>
       <input id="sample-rate" type="number" min="8000" max="96000" step="1000" value="44100" />
     </label>
   </section>
-  <section class="toolbar">
-    <button id="refresh-sheets" type="button">Refresh sheet list</button>
-    <button id="load-sheet" type="button">Load selected sheet</button>
-    <button id="save-sheet" type="button">Save current score</button>
-  </section>
-  <section class="toolbar">
-    <label>
-      <span>Save filename</span>
-      <input id="save-filename" value="untitled.wmusic" placeholder="untitled.wmusic" />
-    </label>
-    <label>
-      <span>Status</span>
-      <span id="status" class="status">Idle</span>
-    </label>
-  </section>
+  <section class="parts" id="parts"></section>
   <section class="playback-bar">
-    <button id="preview-line" type="button">Preview selected</button>
+    <button id="preview-line" type="button">Preview selected (Alt+Enter)</button>
     <button id="render" type="button">Render WAV</button>
     <audio id="audio-player" controls></audio>
   </section>
-  <section class="parts" id="parts"></section>
 `;
 app.appendChild(container);
 
@@ -128,6 +127,12 @@ const partsContainer = app.querySelector<HTMLElement>("#parts")!;
 
 function setStatus(message: string) {
   statusElement.textContent = message;
+}
+
+function syncPartEditorHeights() {
+  partRefs.forEach((ref) => {
+    ref.score.style.height = `${state.partEditorHeight}px`;
+  });
 }
 
 function clampSampleRate(value: number): number {
@@ -310,16 +315,20 @@ async function playSelectedLine() {
   setStatus(`Played preview for part ${index + 1}`);
 }
 
+function previewSelectedLine() {
+  playSelectedLine().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+}
+
 function renderPartInputs() {
   for (let i = 0; i < 4; i += 1) {
     const section = document.createElement("section");
     section.className = "part";
 
-    const label = document.createElement("label");
-    label.textContent = `Part ${i + 1}`;
+    const header = document.createElement("div");
+    header.className = "part-header";
 
-    const waveformLabel = document.createElement("span");
-    waveformLabel.textContent = "Waveform";
+    const label = document.createElement("span");
+    label.textContent = `Part ${i + 1}`;
 
     const waveform = document.createElement("select");
     waveforms.forEach((value) => {
@@ -345,24 +354,54 @@ function renderPartInputs() {
     textarea.addEventListener("keyup", () => {
       state.activePartIndex = i;
     });
+    textarea.addEventListener("keydown", (event) => {
+      if (event.altKey && event.key === "Enter") {
+        event.preventDefault();
+        state.activePartIndex = i;
+        previewSelectedLine();
+      }
+    });
 
-    const waveformRow = document.createElement("div");
-    waveformRow.style.display = "grid";
-    waveformRow.style.gridTemplateColumns = "1fr 2fr";
-    waveformRow.style.gap = "0.4rem";
-    waveformRow.appendChild(waveformLabel);
-    waveformRow.appendChild(waveform);
+    header.appendChild(label);
+    header.appendChild(waveform);
 
-    section.appendChild(label);
-    section.appendChild(waveformRow);
+    section.appendChild(header);
     section.appendChild(textarea);
     partsContainer.appendChild(section);
 
     partRefs.push({ waveform, score: textarea });
   }
+  syncPartEditorHeights();
 }
 
 renderPartInputs();
+
+const resizeHandle = document.createElement("div");
+resizeHandle.className = "parts-resize-handle";
+resizeHandle.title = "Drag to resize all parts";
+resizeHandle.innerHTML = `<span aria-hidden="true"></span>`;
+partsContainer.after(resizeHandle);
+
+let resizeStartY = 0;
+let resizeStartHeight = state.partEditorHeight;
+
+resizeHandle.addEventListener("pointerdown", (event) => {
+  resizeStartY = event.clientY;
+  resizeStartHeight = state.partEditorHeight;
+  resizeHandle.setPointerCapture(event.pointerId);
+});
+
+resizeHandle.addEventListener("pointermove", (event) => {
+  if (!resizeHandle.hasPointerCapture(event.pointerId)) {
+    return;
+  }
+  state.partEditorHeight = Math.max(130, resizeStartHeight + event.clientY - resizeStartY);
+  syncPartEditorHeights();
+});
+
+resizeHandle.addEventListener("pointerup", (event) => {
+  resizeHandle.releasePointerCapture(event.pointerId);
+});
 
 refreshButton.addEventListener("click", () => {
   refreshSheets().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
@@ -373,7 +412,7 @@ loadButton.addEventListener("click", () => {
 });
 
 previewButton.addEventListener("click", () => {
-  playSelectedLine().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+  previewSelectedLine();
 });
 
 saveButton.addEventListener("click", () => {

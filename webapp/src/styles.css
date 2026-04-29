@@ -31,6 +31,15 @@ body {
   gap: 0.75rem;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   margin-bottom: 1rem;
+  align-items: end;
+}
+
+.score-row {
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 180px) minmax(150px, 170px) minmax(180px, 1fr);
+}
+
+.settings-row {
+  grid-template-columns: minmax(180px, 1.1fr) minmax(120px, 140px) minmax(180px, 1.1fr) minmax(90px, 100px) minmax(120px, 140px);
 }
 
 .toolbar label {
@@ -60,14 +69,26 @@ body {
   background: #f3f4f6;
 }
 
+.status-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.status-field > span:first-child {
+  font-size: 0.95rem;
+}
+
+.status {
+  min-height: 1.25rem;
+  font-size: 0.95rem;
+}
+
 .playback-bar {
   display: grid;
   grid-template-columns: minmax(150px, 190px) minmax(130px, 170px) minmax(260px, 1fr);
   gap: 0.75rem;
   align-items: center;
-  margin: 1.25rem 0;
-  border-top: 1px solid #e5e7eb;
-  padding-top: 1rem;
+  margin: 0.75rem 0 0;
 }
 
 .playback-bar button {
@@ -92,7 +113,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin: 1rem 0;
 }
 
 .part {
@@ -103,11 +124,17 @@ body {
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
 }
 
-.part label {
+.part-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   font-size: 0.9rem;
   margin-bottom: 0.45rem;
+}
+
+.part-header select {
+  max-width: 150px;
 }
 
 .part select,
@@ -122,17 +149,36 @@ body {
 
 .part textarea {
   min-height: 130px;
-  resize: vertical;
+  resize: none;
 }
 
-.status {
-  margin-top: 0.8rem;
-  min-height: 1.25rem;
-  font-size: 0.95rem;
+.parts-resize-handle {
+  display: flex;
+  justify-content: center;
+  height: 10px;
+  margin: -0.45rem 0 0.35rem;
+  cursor: ns-resize;
+}
+
+.parts-resize-handle span {
+  width: 56px;
+  height: 7px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background:
+    linear-gradient(#94a3b8, #94a3b8) center / 34px 1px no-repeat,
+    #f8fafc;
+}
+
+.parts-resize-handle:hover span {
+  border-color: #94a3b8;
+  background-color: #f1f5f9;
 }
 
 @media (max-width: 768px) {
   .toolbar,
+  .score-row,
+  .settings-row,
   .playback-bar {
     grid-template-columns: 1fr;
   }
