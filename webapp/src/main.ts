@@ -61,6 +61,7 @@ const partRefs: ElementRef[] = [];
 const state = {
   outputFilename: "m.wav",
   selectedSheet: "",
+  activePartIndex: 0,
 };
 
 const container = document.createElement("div");
@@ -90,7 +91,6 @@ container.innerHTML = `
   <section class="toolbar">
     <button id="refresh-sheets" type="button">Refresh sheet list</button>
     <button id="load-sheet" type="button">Load selected sheet</button>
-    <button id="render" type="button">Render WAV</button>
     <button id="save-sheet" type="button">Save current score</button>
   </section>
   <section class="toolbar">
@@ -99,25 +99,16 @@ container.innerHTML = `
       <input id="save-filename" value="untitled.wmusic" placeholder="untitled.wmusic" />
     </label>
     <label>
-      <span>Use C++ backend</span>
-      <select id="backend-select">
-        <option value="true">C++ (recommended)</option>
-        <option value="false">Python fallback</option>
-      </select>
-    </label>
-    <label>
       <span>Status</span>
       <span id="status" class="status">Idle</span>
     </label>
-    <label>
-      <span>Current filename</span>
-      <input id="loaded-filename" value="" readonly />
-    </label>
   </section>
-  <section class="parts" id="parts"></section>
-  <section class="audio-area">
+  <section class="playback-bar">
+    <button id="preview-line" type="button">Preview selected</button>
+    <button id="render" type="button">Render WAV</button>
     <audio id="audio-player" controls></audio>
   </section>
+  <section class="parts" id="parts"></section>
 `;
 app.appendChild(container);
 
@@ -127,11 +118,10 @@ const sheetSelect = app.querySelector<HTMLSelectElement>("#sheet-select")!;
 const bpmElement = app.querySelector<HTMLInputElement>("#bpm-input")!;
 const sampleRateElement = app.querySelector<HTMLInputElement>("#sample-rate")!;
 const saveFilenameElement = app.querySelector<HTMLInputElement>("#save-filename")!;
-const loadedFilenameElement = app.querySelector<HTMLInputElement>("#loaded-filename")!;
-const backendSelect = app.querySelector<HTMLSelectElement>("#backend-select")!;
 const audioPlayer = app.querySelector<HTMLAudioElement>("#audio-player")!;
 const refreshButton = app.querySelector<HTMLButtonElement>("#refresh-sheets")!;
 const loadButton = app.querySelector<HTMLButtonElement>("#load-sheet")!;
+const previewButton = app.querySelector<HTMLButtonElement>("#preview-line")!;
 const saveButton = app.querySelector<HTMLButtonElement>("#save-sheet")!;
 const renderButton = app.querySelector<HTMLButtonElement>("#render")!;
 const partsContainer = app.querySelector<HTMLElement>("#parts")!;
@@ -177,13 +167,13 @@ function applyPartPayloads(parts: PartPayload[]) {
   });
 }
 
-function getPayload(useCpp = true): RenderRequest {
+function getPayload(): RenderRequest {
   return {
     parts: partPayloads(),
     filename: outputFilenameElement.value || "m.wav",
     sample_rate: clampSampleRate(Number(sampleRateElement.value)),
     bpm: clampBpm(Number(bpmElement.value)),
-    use_cpp: useCpp,
+    use_cpp: true,
   };
 }
 
@@ -262,7 +252,6 @@ async function loadSheet() {
   }
   const data = await apiGet<ScorePayload>(`/api/sheets/${encodeURIComponent(sheetSelect.value)}`);
   applyPartPayloads(data.parts);
-  loadedFilenameElement.value = data.filename;
   state.selectedSheet = data.filename;
   setStatus(`Loaded ${data.filename}`);
 }
@@ -277,12 +266,11 @@ async function saveSheet() {
   const saved = await apiPost<ScorePayload>("/api/sheets", payload);
   await refreshSheets();
   sheetSelect.value = saved.filename;
-  loadedFilenameElement.value = saved.filename;
   setStatus(`Saved ${saved.filename}`);
 }
 
 async function renderWav() {
-  const payload = getPayload(backendSelect.value === "true");
+  const payload = getPayload();
   const response = await apiPost<RenderResponse>("/api/render", payload);
   audioPlayer.src = `${response.audio_url}?_=${Date.now()}`;
   audioPlayer.play().catch(() => {});
@@ -290,12 +278,23 @@ async function renderWav() {
   setStatus(`Rendered ${response.filename}`);
 }
 
-async function playLastLine(index: number) {
-  const current = partRefs[index].score.value.trim();
-  const lines = current.split("\n").map((value) => value.trim()).filter(Boolean);
-  const line = lines[lines.length - 1];
+function selectedLine(textarea: HTMLTextAreaElement): string {
+  const { value, selectionStart, selectionEnd } = textarea;
+  if (selectionStart !== selectionEnd) {
+    return value.slice(selectionStart, selectionEnd).trim();
+  }
+
+  const lineStart = value.lastIndexOf("\n", Math.max(0, selectionStart - 1)) + 1;
+  const nextLineBreak = value.indexOf("\n", selectionStart);
+  const lineEnd = nextLineBreak === -1 ? value.length : nextLineBreak;
+  return value.slice(lineStart, lineEnd).trim();
+}
+
+async function playSelectedLine() {
+  const index = state.activePartIndex;
+  const line = selectedLine(partRefs[index].score);
   if (!line) {
-    setStatus(`Part ${index + 1}: no line to preview.`);
+    setStatus(`Part ${index + 1}: select a line or place the cursor on one.`);
     return;
   }
   const payload: PreviewRequest = {
@@ -303,7 +302,7 @@ async function playLastLine(index: number) {
     line,
     sample_rate: clampSampleRate(Number(sampleRateElement.value)),
     bpm: clampBpm(Number(bpmElement.value)),
-    use_cpp: backendSelect.value === "true",
+    use_cpp: true,
   };
   const response = await apiPost<RenderResponse>("/api/preview-line", payload);
   audioPlayer.src = `${response.audio_url}?_=${Date.now()}`;
@@ -334,24 +333,18 @@ function renderPartInputs() {
     const textarea = document.createElement("textarea");
     textarea.placeholder = "Example: 2c 2d 2eb 2g | 2f 2g";
     textarea.value = "";
-
-    const actions = document.createElement("div");
-    actions.className = "part-actions";
-    const previewButton = document.createElement("button");
-    previewButton.type = "button";
-    previewButton.textContent = "Preview last line";
-    previewButton.addEventListener("click", () => playLastLine(i));
-
-    const clearButton = document.createElement("button");
-    clearButton.type = "button";
-    clearButton.textContent = "Clear part";
-    clearButton.addEventListener("click", () => {
-      textarea.value = "";
-      setStatus(`Cleared part ${i + 1}`);
+    textarea.addEventListener("focus", () => {
+      state.activePartIndex = i;
     });
-
-    actions.appendChild(previewButton);
-    actions.appendChild(clearButton);
+    textarea.addEventListener("select", () => {
+      state.activePartIndex = i;
+    });
+    textarea.addEventListener("click", () => {
+      state.activePartIndex = i;
+    });
+    textarea.addEventListener("keyup", () => {
+      state.activePartIndex = i;
+    });
 
     const waveformRow = document.createElement("div");
     waveformRow.style.display = "grid";
@@ -363,7 +356,6 @@ function renderPartInputs() {
     section.appendChild(label);
     section.appendChild(waveformRow);
     section.appendChild(textarea);
-    section.appendChild(actions);
     partsContainer.appendChild(section);
 
     partRefs.push({ waveform, score: textarea });
@@ -378,6 +370,10 @@ refreshButton.addEventListener("click", () => {
 
 loadButton.addEventListener("click", () => {
   loadSheet().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+});
+
+previewButton.addEventListener("click", () => {
+  playSelectedLine().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
 });
 
 saveButton.addEventListener("click", () => {

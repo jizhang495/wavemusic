@@ -29,7 +29,7 @@ body {
 .toolbar {
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   margin-bottom: 1rem;
 }
 
@@ -60,6 +60,34 @@ body {
   background: #f3f4f6;
 }
 
+.playback-bar {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(130px, 170px) minmax(260px, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  margin: 1.25rem 0;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+
+.playback-bar button {
+  border: 1px solid #9ca3af;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  background: #f9fafb;
+  color: #111827;
+  cursor: pointer;
+  width: 100%;
+}
+
+.playback-bar button:hover {
+  background: #f3f4f6;
+}
+
+.playback-bar audio {
+  width: 100%;
+}
+
 .parts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -83,8 +111,7 @@ body {
 }
 
 .part select,
-.part textarea,
-.part button {
+.part textarea {
   width: 100%;
   border-radius: 8px;
   border: 1px solid #d1d5db;
@@ -98,40 +125,15 @@ body {
   resize: vertical;
 }
 
-.part-actions {
-  display: flex;
-  gap: 0.45rem;
-  margin-top: 0.45rem;
-}
-
-.part-actions button {
-  flex: 1;
-  cursor: pointer;
-  background: #f9fafb;
-}
-
-.part-actions button:hover {
-  background: #f3f4f6;
-}
-
 .status {
   margin-top: 0.8rem;
   min-height: 1.25rem;
   font-size: 0.95rem;
 }
 
-.audio-area {
-  margin: 1.25rem 0;
-  border-top: 1px solid #e5e7eb;
-  padding-top: 1rem;
-}
-
-.audio-area audio {
-  width: min(100%, 680px);
-}
-
 @media (max-width: 768px) {
-  .toolbar {
+  .toolbar,
+  .playback-bar {
     grid-template-columns: 1fr;
   }
 }

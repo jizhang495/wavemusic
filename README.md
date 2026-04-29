@@ -1,6 +1,30 @@
 # WaveMusic
 Writing music audio files using sine, square, triangular and sawtooth wave
 
+## Quick Start
+
+### Prerequisites
+
+- Linux/WSL
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/)
+- Node.js/npm
+- g++
+- pybind11 build deps
+
+```bash
+sudo apt install python3-dev g++ cmake pybind11-dev
+```
+
+### Run The App
+
+```bash
+uv sync
+uv run setup.py build_ext --inplace
+uv run main.py
+```
+Open http://127.0.0.1:8000.
+
 ## Architecture
 
 - C++ audio engine
@@ -51,30 +75,6 @@ Architecture of audio engine
                              └──────────────────────────┘
 ```
 
-## Quick Start
-
-### Prerequisites
-
-- Linux/WSL
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/)
-- Node.js/npm
-- g++
-- pybind11 build deps
-
-```bash
-sudo apt install python3-dev g++ cmake pybind11-dev
-```
-
-### Run The App
-
-```bash
-uv sync
-uv run setup.py build_ext --inplace
-uv run main.py
-```
-Open http://127.0.0.1:8000.
-
 ## Development
 
 ### C++ Audio Engine
@@ -92,6 +92,8 @@ make refresh DEBUG=1
 ```
 
 ### Python API Layer
+
+Uses FastAPI, pybind.
 
 The *wave* module in the Python standard library provides a convenient interface to the WAV sound format.
 References:
