@@ -16,6 +16,13 @@ body {
   margin: 0 auto;
 }
 
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
 .title {
   margin: 0 0 0.5rem;
   font-size: clamp(1.6rem, 3vw, 2.4rem);
@@ -24,6 +31,23 @@ body {
 .subtitle {
   opacity: 0.9;
   margin-bottom: 1.6rem;
+}
+
+.github-link {
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  color: #111827;
+  background: #ffffff;
+  padding: 0.45rem 0.8rem;
+  text-decoration: none;
+  font-size: 0.9rem;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.github-link:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
 }
 
 .toolbar {
@@ -176,6 +200,10 @@ body {
 }
 
 @media (max-width: 768px) {
+  .app-header {
+    align-items: flex-start;
+  }
+
   .toolbar,
   .score-row,
   .settings-row,

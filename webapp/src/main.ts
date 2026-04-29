@@ -72,8 +72,13 @@ const state = {
 
 const container = document.createElement("div");
 container.innerHTML = `
-  <h1 class="title">WaveMusic</h1>
-  <p class="subtitle">Create scores and render WAV audio.</p>
+  <header class="app-header">
+    <div>
+      <h1 class="title">WaveMusic</h1>
+      <p class="subtitle">Create scores and render WAV audio.</p>
+    </div>
+    <a class="github-link" href="https://github.com/jizhang495/wavemusic" target="_blank" rel="noreferrer">GitHub</a>
+  </header>
   <section class="toolbar score-row">
     <label>
       <span>Load score</span>

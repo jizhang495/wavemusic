@@ -10,11 +10,31 @@ from scripts.music import Music
 
 BASE_DIR = Path(__file__).resolve().parent
 WEBAPP_DIR = BASE_DIR / "webapp"
-WEBAPP_DIST = WEBAPP_DIR / "dist" / "index.html"
+WEBAPP_DIST_INDEX = WEBAPP_DIR / "dist" / "index.html"
+
+
+def _frontend_source_files():
+    source_files = [
+        WEBAPP_DIR / "index.html",
+        WEBAPP_DIR / "package.json",
+        WEBAPP_DIR / "package-lock.json",
+        WEBAPP_DIR / "vite.config.ts",
+    ]
+    source_dir = WEBAPP_DIR / "src"
+    if source_dir.exists():
+        source_files.extend(path for path in source_dir.rglob("*") if path.is_file())
+    return source_files
+
+
+def _frontend_needs_build():
+    if not WEBAPP_DIST_INDEX.exists():
+        return True
+    dist_mtime = WEBAPP_DIST_INDEX.stat().st_mtime
+    return any(path.exists() and path.stat().st_mtime > dist_mtime for path in _frontend_source_files())
 
 
 def _run_web():
-    if not WEBAPP_DIST.exists():
+    if _frontend_needs_build():
         if shutil.which("npm") is None:
             raise RuntimeError("npm is required to build the web frontend. Install Node.js, then run this again.")
         if not (WEBAPP_DIR / "node_modules").exists():
