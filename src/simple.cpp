@@ -8,6 +8,7 @@
 #include <vector>
 #include <regex>
 #include <cstdint> // added for uint8_t, uint32_t, etc.
+#include <string>
 
 #include "sigen.h"
 
@@ -59,6 +60,8 @@ score_t parse(std::string str_in) {
                 s = shape_t::triangle;
             } else if (token == "saw:") {
                 s = shape_t::saw;
+            } else if (token == "sawtooth:") {
+                s = shape_t::saw;
             }
             if (!stave.empty()) {
                 score.push_back(stave);
@@ -96,6 +99,35 @@ int playscore(int argc, char **argv) {
     static_assert(sizeof(wav_hdr_t) == 44, "wav_hdr_t size error");
     #endif
 
+    std::string score_filename = "sheets/twsxxn.wmusic";
+    std::string output_filename = FILE_NAME;
+    bool should_play = true;
+
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+
+        if (arg == "--no-play" || arg == "--silent") {
+            should_play = false;
+            continue;
+        }
+
+        if (arg.rfind("--out=", 0) == 0) {
+            output_filename = arg.substr(6);
+            continue;
+        }
+
+        if (arg.rfind("--score=", 0) == 0) {
+            score_filename = arg.substr(8);
+            continue;
+        }
+
+        if (score_filename == "sheets/twsxxn.wmusic") {
+            score_filename = arg;
+        } else if (output_filename == FILE_NAME) {
+            output_filename = arg;
+        }
+    }
+
     // write file
     wav_hdr_t wav_hdr;
     uint32_t data_size;
@@ -104,7 +136,7 @@ int playscore(int argc, char **argv) {
     int ptr;
 
     std::ofstream f;
-    f.open(FILE_NAME, std::ios::binary);
+    f.open(output_filename, std::ios::binary);
     f.write(reinterpret_cast<const char *>(&wav_hdr), sizeof(wav_hdr_t));
 
     // Reads score
@@ -114,8 +146,6 @@ int playscore(int argc, char **argv) {
     //   - first stave not longest
     //   - bad barline positions (parser ignores barlines)
     // TODO: add persistent length settings
-    std::string score_filename = "sheets/twsxxn.wmusic";
-    if (argc > 1) { score_filename = argv[1]; };
     std::ifstream f_score;
     f_score.open(score_filename);
     std::stringstream sstr_in;
@@ -157,28 +187,30 @@ int playscore(int argc, char **argv) {
     // play wav with system call
     bool played = false;
 
-    #ifdef __APPLE__
-    int rvalue = system("afplay " FILE_NAME " &");
-    if(rvalue == 0) { played = true; }
-
-    #elif __linux__
-    // check if aplay exists
-    int rvalue = system("command -v aplay > /dev/null");
-    if (rvalue == 0) {
-        rvalue = system("aplay " FILE_NAME " &");
+    if (should_play) {
+        #ifdef __APPLE__
+        int rvalue = system(std::string("afplay \"" + output_filename + "\" &").c_str());
         if(rvalue == 0) { played = true; }
+
+        #elif __linux__
+        // check if aplay exists
+        int rvalue = system("command -v aplay > /dev/null");
+        if (rvalue == 0) {
+            rvalue = system(std::string("aplay \"" + output_filename + "\" &").c_str());
+            if(rvalue == 0) { played = true; }
+        }
+
+        #elif _WIN32
+        // Windows: use VLC for async playback
+        std::string cmd = "start /B vlc --intf dummy --play-and-exit \"" + output_filename + "\"";
+        int rvalue = system(cmd.c_str());
+        if (rvalue == 0) { played = true; }
+
+        #endif
     }
 
-    #elif _WIN32
-    // Windows: use PowerShell's PlaySound (async playback)
-    std::string cmd = "start /B vlc --intf dummy --play-and-exit " FILE_NAME;
-    int rvalue = system(cmd.c_str());
-    if (rvalue == 0) { played = true; }
-
-    #endif
-
-    if (!played) {
-        std::cout << "unsupported OS, please manually start playback of m.wav" << std::endl;
+    if (should_play && !played) {
+        std::cout << "unsupported OS, please manually start playback of " << output_filename << std::endl;
     }
 
     return 0;

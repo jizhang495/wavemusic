@@ -23,6 +23,10 @@ __pycache__/
 *.pyd
 *.dll
 
+# Frontend dependencies
+webapp/node_modules/
+webapp/.vite/
+
 # Build artifacts
 build/
 dist/

@@ -1,0 +1,137 @@
+:root {
+  color-scheme: light;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #111827;
+  min-height: 100vh;
+}
+
+#app {
+  padding: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.title {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+}
+
+.subtitle {
+  opacity: 0.9;
+  margin-bottom: 1.6rem;
+}
+
+.toolbar {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+.toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.toolbar input,
+.toolbar select,
+.toolbar button {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  background: #ffffff;
+  color: #111827;
+  width: 100%;
+}
+
+.toolbar button {
+  cursor: pointer;
+  border-color: #9ca3af;
+  background: #f9fafb;
+}
+
+.toolbar button:hover {
+  background: #f3f4f6;
+}
+
+.parts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.part {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.8rem;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.part label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  margin-bottom: 0.45rem;
+}
+
+.part select,
+.part textarea,
+.part button {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
+  padding: 0.5rem;
+}
+
+.part textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
+.part-actions {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+}
+
+.part-actions button {
+  flex: 1;
+  cursor: pointer;
+  background: #f9fafb;
+}
+
+.part-actions button:hover {
+  background: #f3f4f6;
+}
+
+.status {
+  margin-top: 0.8rem;
+  min-height: 1.25rem;
+  font-size: 0.95rem;
+}
+
+.audio-area {
+  margin: 1.25rem 0;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+
+.audio-area audio {
+  width: min(100%, 680px);
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+}

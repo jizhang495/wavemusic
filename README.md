@@ -1,11 +1,13 @@
-
 # WaveMusic
 Writing music audio files using sine, square, triangular and sawtooth wave
 
+## Architecture
 
-## C++ Implementation
+- C++ audio engine
+- Python web/API layer
+- TypeScript web frontend
 
-Architecture of the C++ implementation
+Architecture of audio engine
 ```
 
 
@@ -49,51 +51,56 @@ Architecture of the C++ implementation
                              └──────────────────────────┘
 ```
 
-To use the C++ version:
+## Quick Start
+
+### Prerequisites
+
+- Linux/WSL
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/)
+- Node.js/npm
+- g++
+- pybind11 build deps
+
+```bash
+sudo apt install python3-dev g++ cmake pybind11-dev
+```
+
+### Run The App
+
+```bash
+uv sync
+uv run setup.py build_ext --inplace
+uv run main.py
+```
+Open http://127.0.0.1:8000.
+
+## Development
+
+### C++ Audio Engine
+
+To build and run directly:
 ```bash
 make simple
-```
-```bash
 ./simple sheets/<title>.wmusic
 ```
 
 for debug mode:
 ```bash
 make refresh DEBUG=1
-```
-```bash
 ./simple sheets/<title>.wmusic
 ```
 
-
-## Python Implementation
+### Python API Layer
 
 The *wave* module in the Python standard library provides a convenient interface to the WAV sound format.
 References:
 <https://docs.python.org/3/library/wave.html>
 <https://www.tutorialspoint.com/read-and-write-wav-files-using-python-wave>
 
-
-### On Linux
-
-(Note: WSL may need extra configuration to display GUI and play sound.)
-
-To incorporate the C++ code as a backend, use pybind11:
-```bash
-sudo apt install python3-dev g++ cmake pybind11-dev
-```
-```bash
-uv run setup.py build_ext --inplace
-```
-where [uv](https://docs.astral.sh/uv/) is recommended for dependency management.
-
 To run the python script:
 ```bash
 uv run main.py
-```
-or
-```bash
-uv run main.py gui
 ```
 To use command-line interface:
 ```bash
@@ -104,63 +111,29 @@ To generate WAV from score:
 uv run main.py sheets/<title>.wmusic
 ```
 
-To build a standalone app:
+### Web frontend
+
+Run the app:
 ```bash
-uv run pyinstaller main.py --onefile 
-# pyinstaller main.py --onefile --clean --noconsole --icon=icon.ico
+uv run main.py
 ```
 
+Then open `http://127.0.0.1:8000`.
 
-### On Windows
+This starts the Python API and serves the built TypeScript frontend from the
+same local server. The first run builds the frontend automatically if
+`webapp/dist` does not exist.
 
-Use [MSYS2](https://www.msys2.org/) MINGW x64 terminal:
+For frontend development, run the API in one terminal and Vite in another:
 ```bash
-pacman -Syu
-# Close terminal, reopen it (again in MinGW 64-bit)
-pacman -Syu
+uv run uvicorn scripts.web_api:app --host 127.0.0.1 --port 8000 --reload
+cd webapp && npm run dev
 ```
-To use inside VScode: In VScode, open Settings, search for 'terminal.integrated.profiles.windows' - Edit in settings.json - add:
-```json
-"terminal.integrated.profiles.windows": {
-  "MSYS2 MinGW 64-bit": {
-    "path": "C:\\msys64\\usr\\bin\\bash.exe",
-    "args": ["--login", "-i"],
-    "env": {
-      "MSYSTEM": "MINGW64",
-      "CHERE_INVOKING": "1"
-    }
-  }
-},
-"terminal.integrated.defaultProfile.windows": "MSYS2 MinGW 64-bit"
-```
-Restart VScode, open terminal.
-```bash
-pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-python-pip mingw-w64-x86_64-pybind11 git
-g++ --version
-python --version
-cmake --version
-```
-Set up .venv and dependencies (uv can be tricky in MSYS2 Mingw)
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install --upgrade -r requirements.txt
-```
-```bash
-python setup.py build_ext --inplace
-```
-To run the python script:
-```bash
-python main.py
-```
-To build a standalone app:
-```bash
-pyinstaller main.py --onefile 
-# pyinstaller main.py --onefile --clean --noconsole --icon=icon.ico
-```
+Then open `http://127.0.0.1:5173`.
 
 
-----
+## Roadmap
+
 Python TODO list:
 
  - [ ] time different implementations main_cpp.py, main_list.py, main_np.py and compare with C++
@@ -189,57 +162,3 @@ C++ TODO list:
  - [x] triangle wave generation
  - [x] polyphony doesn't sound out of tune anymore?
  - [x] saw and square waves sounds bad, add LPF to soften it
-
-
-----
-Using [uv](https://docs.astral.sh/uv/) for Python dependency management
-
-Installing uv:
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-Syncing Python version, .venv, dependencies (optional command):
-```bash
-uv sync
-```
-Using .venv (optional command, as it should be automatic):
-```bash
-source ./venv/Scripts/activate
-```
-Syncing and running project:
-```bash
-uv run main.py
-```
-Linting with ruff:
-```bash
-uvx ruff check .
-```
-```bash
-uvx ruff format
-```
-
-Other useful commands:
-
-Creating 'pyproject.toml' and '.python-version:
-```bash
-uv init
-```
-Adding package dependencies to 'pyproject.toml':
-```bash
-uv add <package>
-```
-Adding package dependencies from 'requirements.txt' to 'pyproject.toml':
-```bash
-uv add -r requirements.txt
-```
-Adding ruff and pytest as development dependencies:
-```bash
-uv add ruff --dev
-```
-```bash
-uv add pytest --dev
-```
-Generating 'requirements.txt' from a UV lock file:
-```bash
-uv export -o requirements.txt
-```

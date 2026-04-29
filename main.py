@@ -1,34 +1,37 @@
 #!/usr/bin/env python3
-import tkinter as tk
+import shutil
+import subprocess
 import sys
+from pathlib import Path
+
 from src.simple import main_pybind
-from scripts.gui import WaveMusicGUI
 from scripts.music import Music
 
-class MainApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("WaveMusic")
-        self.gui = WaveMusicGUI(root)
-        self.gui.frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-def main_gui():
-    try:
-        root = tk.Tk()
-        app = MainApp(root)
-        root.mainloop()
-    except Exception as e:
-        print(f"Error running tkinter: {e}")
-        root.destroy()
-        print("Starting in CLI mode...")
-        main()
+BASE_DIR = Path(__file__).resolve().parent
+WEBAPP_DIR = BASE_DIR / "webapp"
+WEBAPP_DIST = WEBAPP_DIR / "dist" / "index.html"
+
+
+def _run_web():
+    if not WEBAPP_DIST.exists():
+        if shutil.which("npm") is None:
+            raise RuntimeError("npm is required to build the web frontend. Install Node.js, then run this again.")
+        if not (WEBAPP_DIR / "node_modules").exists():
+            subprocess.run(["npm", "install"], cwd=WEBAPP_DIR, check=True)
+        subprocess.run(["npm", "run", "build"], cwd=WEBAPP_DIR, check=True)
+
+    import uvicorn
+    print("WaveMusic web app: http://127.0.0.1:8000")
+    uvicorn.run("scripts.web_api:app", host="127.0.0.1", port=8000, reload=False)
 
 def main(*args):
-    # Command line interface for playing music
-    print("Hello from wavemusic!")
-    if args[0] == "gui":
-        main_gui()
+    if not args:
+        _run_web()
         return
+
+    # Command line interface for generating music
+    print("Hello from wavemusic!")
     if args[0] == "cli":
         pass
     else:
@@ -85,4 +88,4 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         main(*sys.argv[1:])
     else:
-        main_gui()
+        main()
