@@ -50,9 +50,6 @@ score_t parse(std::string str_in) {
 
     for (; iter != end; ++iter) {
         std::string token = *iter;
-        if (token.empty()) {
-            continue;
-        }
         // instrument headers
         if (token.back() == ':') {
             if (token == "sine:") {
