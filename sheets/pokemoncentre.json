@@ -1,4 +1,7 @@
 {
+  "title": "pokemon centre",
+  "key": "c major",
+  "time_signature": "4/4",
   "bpm": 100,
   "sample_rate": 44100,
   "parts": [

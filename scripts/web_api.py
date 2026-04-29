@@ -19,7 +19,10 @@ from pydantic import BaseModel, Field
 from scripts.music import Music
 from scripts.project import (
     DEFAULT_BPM,
+    DEFAULT_KEY,
     DEFAULT_SAMPLE_RATE,
+    DEFAULT_TIME_SIGNATURE,
+    DEFAULT_TITLE,
     DEFAULT_WAVEFORM,
     PART_COUNT,
     clamp_int,
@@ -220,6 +223,9 @@ def _default_parts() -> list[Part]:
 
 
 class RenderRequest(BaseModel):
+    title: str = Field(default=DEFAULT_TITLE)
+    key: str = Field(default=DEFAULT_KEY)
+    time_signature: str = Field(default=DEFAULT_TIME_SIGNATURE)
     parts: list[Part] = Field(default_factory=_default_parts)
     filename: str = Field(default="m.wav")
     sample_rate: int = Field(default=DEFAULT_SAMPLE_RATE)
@@ -244,6 +250,9 @@ class RenderResponse(BaseModel):
 
 class SaveRequest(BaseModel):
     filename: str = Field(default="score.json")
+    title: str = Field(default=DEFAULT_TITLE)
+    key: str = Field(default=DEFAULT_KEY)
+    time_signature: str = Field(default=DEFAULT_TIME_SIGNATURE)
     bpm: int = Field(default=DEFAULT_BPM)
     sample_rate: int = Field(default=DEFAULT_SAMPLE_RATE)
     parts: list[Part] = Field(default_factory=_default_parts)
@@ -251,6 +260,9 @@ class SaveRequest(BaseModel):
 
 class ScoreResponse(BaseModel):
     filename: str
+    title: str
+    key: str
+    time_signature: str
     bpm: int
     sample_rate: int
     parts: list[Part]

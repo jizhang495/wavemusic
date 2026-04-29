@@ -3,6 +3,12 @@
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   background: #ffffff;
@@ -63,13 +69,14 @@ body {
 }
 
 .settings-row {
-  grid-template-columns: minmax(170px, 1.1fr) minmax(100px, 120px) minmax(170px, 1.1fr) minmax(95px, 110px) minmax(90px, 100px) minmax(120px, 140px);
+  grid-template-columns: minmax(150px, 180px) minmax(80px, 90px) minmax(115px, 130px) minmax(90px, 105px) minmax(110px, 130px) minmax(95px, 115px) minmax(90px, 110px);
 }
 
 .toolbar label {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  min-width: 0;
 }
 
 .toolbar input,
