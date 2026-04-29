@@ -41,6 +41,7 @@ type ElementRef = {
 };
 
 const waveforms: Waveform[] = ["triangle", "sine", "square", "sawtooth"];
+const scoreSplitPattern = /(?=\b(?:triangle|sine|square|saw|sawtooth):)/i;
 const apiRoots = (() => {
   const hostname = window.location.hostname;
   if (window.location.protocol === "file:") {
@@ -76,8 +77,9 @@ container.innerHTML = `
         <option value="">Select score</option>
       </select>
     </label>
-    <button id="load-sheet" type="button">Load selected score</button>
-    <button id="refresh-sheets" type="button">Refresh score list</button>
+    <button id="load-sheet" type="button">Load sample</button>
+    <button id="load-local-score" type="button">Load from local</button>
+    <input id="local-score-file" type="file" accept=".wmusic" hidden />
     <div class="status-field">
       <span>Status</span>
       <span id="status" class="status">Idle</span>
@@ -93,6 +95,7 @@ container.innerHTML = `
       <span>Output WAV filename</span>
       <input id="output-filename" value="m.wav" placeholder="m.wav" />
     </label>
+    <button id="save-wav" type="button">Save WAV</button>
     <label>
       <span>BPM</span>
       <input id="bpm-input" type="number" min="20" max="300" value="100" />
@@ -118,10 +121,12 @@ const bpmElement = app.querySelector<HTMLInputElement>("#bpm-input")!;
 const sampleRateElement = app.querySelector<HTMLInputElement>("#sample-rate")!;
 const saveFilenameElement = app.querySelector<HTMLInputElement>("#save-filename")!;
 const audioPlayer = app.querySelector<HTMLAudioElement>("#audio-player")!;
-const refreshButton = app.querySelector<HTMLButtonElement>("#refresh-sheets")!;
 const loadButton = app.querySelector<HTMLButtonElement>("#load-sheet")!;
+const localScoreButton = app.querySelector<HTMLButtonElement>("#load-local-score")!;
+const localScoreFileInput = app.querySelector<HTMLInputElement>("#local-score-file")!;
 const previewButton = app.querySelector<HTMLButtonElement>("#preview-line")!;
 const saveButton = app.querySelector<HTMLButtonElement>("#save-sheet")!;
+const saveWavButton = app.querySelector<HTMLButtonElement>("#save-wav")!;
 const renderButton = app.querySelector<HTMLButtonElement>("#render")!;
 const partsContainer = app.querySelector<HTMLElement>("#parts")!;
 
@@ -158,6 +163,58 @@ function buildScoreText(): string {
   return partPayloads()
     .map(({ waveform, score }) => `${waveform}: ${score}`)
     .join("\n");
+}
+
+function ensureExtension(filename: string, extension: string): string {
+  const trimmed = filename.trim();
+  const fallback = `untitled${extension}`;
+  const safeName = trimmed || fallback;
+  return safeName.toLowerCase().endsWith(extension) ? safeName : `${safeName}${extension}`;
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function audioUrlWithCache(audioUrl: string): string {
+  const prefix = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+  return `${prefix}${audioUrl}?_=${Date.now()}`;
+}
+
+function normalizeWaveform(value: string): Waveform {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "saw") {
+    return "sawtooth";
+  }
+  if (waveforms.includes(normalized as Waveform)) {
+    return normalized as Waveform;
+  }
+  return "triangle";
+}
+
+function parseScoreText(scoreText: string): PartPayload[] {
+  const blocks = scoreText.split(scoreSplitPattern).map((block) => block.trim()).filter(Boolean);
+  const parts: PartPayload[] = [];
+
+  for (let index = 0; index < 4; index += 1) {
+    const block = blocks[index] || "";
+    const delimiterIndex = block.indexOf(":");
+    if (delimiterIndex >= 0) {
+      parts.push({
+        waveform: normalizeWaveform(block.slice(0, delimiterIndex)),
+        score: block.slice(delimiterIndex + 1).trim(),
+      });
+    } else {
+      parts.push({ waveform: "triangle", score: block.trim() });
+    }
+  }
+
+  return parts;
 }
 
 function applyPartPayloads(parts: PartPayload[]) {
@@ -247,40 +304,70 @@ async function refreshSheets() {
     option.textContent = filename;
     sheetSelect.appendChild(option);
   });
-  setStatus(`Loaded ${files.length} sheet(s).`);
+  setStatus(`Loaded ${files.length} sample score(s).`);
 }
 
 async function loadSheet() {
   if (!sheetSelect.value) {
-    setStatus("Pick a score first.");
+    setStatus("Pick a sample score first.");
     return;
   }
   const data = await apiGet<ScorePayload>(`/api/sheets/${encodeURIComponent(sheetSelect.value)}`);
   applyPartPayloads(data.parts);
   state.selectedSheet = data.filename;
-  setStatus(`Loaded ${data.filename}`);
+  saveFilenameElement.value = data.filename;
+  setStatus(`Loaded sample ${data.filename}`);
+}
+
+async function loadLocalScore() {
+  const file = localScoreFileInput.files?.[0];
+  if (!file) {
+    return;
+  }
+  if (!file.name.toLowerCase().endsWith(".wmusic")) {
+    setStatus("Choose a .wmusic score file.");
+    localScoreFileInput.value = "";
+    return;
+  }
+
+  const score = await file.text();
+  applyPartPayloads(parseScoreText(score));
+  saveFilenameElement.value = file.name;
+  state.selectedSheet = file.name;
+  sheetSelect.value = "";
+  localScoreFileInput.value = "";
+  setStatus(`Loaded local ${file.name}`);
 }
 
 async function saveSheet() {
-  const filename = saveFilenameElement.value.trim() || "untitled.wmusic";
-  const payload: ScorePayload = {
-    filename,
-    score: buildScoreText(),
-    parts: partPayloads(),
-  };
-  const saved = await apiPost<ScorePayload>("/api/sheets", payload);
-  await refreshSheets();
-  sheetSelect.value = saved.filename;
-  setStatus(`Saved ${saved.filename}`);
+  const filename = ensureExtension(saveFilenameElement.value, ".wmusic");
+  const blob = new Blob([`${buildScoreText()}\n`], { type: "text/plain;charset=utf-8" });
+  downloadBlob(blob, filename);
+  setStatus(`Saved ${filename} to local`);
 }
 
 async function renderWav() {
   const payload = getPayload();
   const response = await apiPost<RenderResponse>("/api/render", payload);
-  audioPlayer.src = `${response.audio_url}?_=${Date.now()}`;
+  audioPlayer.src = audioUrlWithCache(response.audio_url);
   audioPlayer.play().catch(() => {});
   state.outputFilename = response.filename;
   setStatus(`Rendered ${response.filename}`);
+}
+
+async function saveWav() {
+  const payload = getPayload();
+  const response = await apiPost<RenderResponse>("/api/render", payload);
+  const filename = ensureExtension(outputFilenameElement.value || response.filename, ".wav");
+  const audioUrl = audioUrlWithCache(response.audio_url);
+  audioPlayer.src = audioUrl;
+  const audioResponse = await fetch(audioUrl);
+  if (!audioResponse.ok) {
+    throw new Error(`Failed to download WAV: ${audioResponse.statusText}`);
+  }
+  downloadBlob(await audioResponse.blob(), filename);
+  state.outputFilename = response.filename;
+  setStatus(`Saved ${filename} to local`);
 }
 
 function selectedLine(textarea: HTMLTextAreaElement): string {
@@ -310,7 +397,7 @@ async function playSelectedLine() {
     use_cpp: true,
   };
   const response = await apiPost<RenderResponse>("/api/preview-line", payload);
-  audioPlayer.src = `${response.audio_url}?_=${Date.now()}`;
+  audioPlayer.src = audioUrlWithCache(response.audio_url);
   audioPlayer.play().catch(() => {});
   setStatus(`Played preview for part ${index + 1}`);
 }
@@ -403,12 +490,16 @@ resizeHandle.addEventListener("pointerup", (event) => {
   resizeHandle.releasePointerCapture(event.pointerId);
 });
 
-refreshButton.addEventListener("click", () => {
-  refreshSheets().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
-});
-
 loadButton.addEventListener("click", () => {
   loadSheet().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+});
+
+localScoreButton.addEventListener("click", () => {
+  localScoreFileInput.click();
+});
+
+localScoreFileInput.addEventListener("change", () => {
+  loadLocalScore().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
 });
 
 previewButton.addEventListener("click", () => {
@@ -417,6 +508,10 @@ previewButton.addEventListener("click", () => {
 
 saveButton.addEventListener("click", () => {
   saveSheet().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+});
+
+saveWavButton.addEventListener("click", () => {
+  saveWav().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
 });
 
 renderButton.addEventListener("click", () => {

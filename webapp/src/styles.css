@@ -39,7 +39,7 @@ body {
 }
 
 .settings-row {
-  grid-template-columns: minmax(180px, 1.1fr) minmax(120px, 140px) minmax(180px, 1.1fr) minmax(90px, 100px) minmax(120px, 140px);
+  grid-template-columns: minmax(170px, 1.1fr) minmax(100px, 120px) minmax(170px, 1.1fr) minmax(95px, 110px) minmax(90px, 100px) minmax(120px, 140px);
 }
 
 .toolbar label {
