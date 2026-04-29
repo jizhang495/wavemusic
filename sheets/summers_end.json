@@ -1,0 +1,44 @@
+{
+  "bpm": 100,
+  "sample_rate": 44100,
+  "parts": [
+    {
+      "name": "lead",
+      "waveform": "square",
+      "score": [
+        "4b4 2c+5 2e 4f+ g+ | 16g+",
+        "4b4 2c+5 2e 4f+ g+ | 6g+ 2f+ 4f+ 2b4 2b",
+        "2b4 2c+5 2e 2b4 2c+5 2e 2f+ 2g+ | 6g+ 1f+ e 4e 2f+4 g+",
+        "2f+ f+ f+ g+ 4c+ 2f+ 2g+ | 4f+ 2f+ 2g+ 4b 2g+ 1f+ e",
+        "16e"
+      ]
+    },
+    {
+      "name": "harmony",
+      "waveform": "triangle",
+      "score": [
+        "4b3 4e4 4f+ 4g+ | 4b c+5 e f+",
+        "4e5 2r 2c+5 4b4 4g+ | 4e c+ b3 a",
+        "4g+ g+ f+ b | c4 g+ e b3",
+        "6a 10c+4 | 6f+3 2g+ 4b g+",
+        "16g+3"
+      ]
+    },
+    {
+      "name": "bass",
+      "waveform": "sine",
+      "score": [
+        "8e3 8b | c+4 g+3",
+        "8a3 8g+ | f+ b",
+        "8e3 b | g+ c+4",
+        "16a3 | 16b3",
+        "16e3"
+      ]
+    },
+    {
+      "name": "part 4",
+      "waveform": "triangle",
+      "score": []
+    }
+  ]
+}

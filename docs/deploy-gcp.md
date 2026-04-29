@@ -80,7 +80,7 @@ Directory used for generated score and WAV files. The Docker image defaults this
 
 `WAVEMUSIC_GENERATED_TTL_SECONDS`
 
-How long generated `.wmusic` and `.wav` files are kept before cleanup. Defaults to `3600`.
+How long generated `.score` and `.wav` files are kept before cleanup. Defaults to `3600`.
 
 `WAVEMUSIC_GENERATED_CLEANUP_INTERVAL_SECONDS`
 
@@ -90,13 +90,13 @@ Minimum time between cleanup scans. Defaults to `300`.
 
 Cloud Run filesystem writes are ephemeral. That is fine for this app because generated files are temporary preview/download artifacts.
 
-The sample `.wmusic` files are copied into the container image from `sheets/`. To update public sample scores, commit the sheet changes and redeploy the backend.
+The sample `.json` music files are copied into the container image from `sheets/`. To update public sample scores, commit the sheet changes and redeploy the backend.
 
 Server-side score saving is disabled. The API reads sample scores from `sheets/`, but user-created scores are saved locally by the browser.
 
 Rendering uses temporary backend files:
 
-- `/tmp/wavemusic/render-<timestamp>-<id>.wmusic`
+- `/tmp/wavemusic/render-<timestamp>-<id>.score`
 - `/tmp/wavemusic/render-<timestamp>-<id>.wav`
 
 Those files are unique per preview/render request. Old generated files are cleaned up automatically, and all generated files disappear when the Cloud Run instance is recycled.
