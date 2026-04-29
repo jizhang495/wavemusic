@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import os
 import shutil
+import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 import re
 
 from fastapi import FastAPI, HTTPException
@@ -18,7 +20,9 @@ from src.simple import main_pybind
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SHEETS_DIR = BASE_DIR / "sheets"
-GENERATED_DIR = BASE_DIR / "build" / "webapi"
+GENERATED_DIR = Path(
+    os.environ.get("WAVEMUSIC_GENERATED_DIR", str(Path(tempfile.gettempdir()) / "wavemusic"))
+)
 DIST_DIR = BASE_DIR / "webapp" / "dist"
 
 SHEETS_DIR.mkdir(exist_ok=True)
@@ -32,9 +36,16 @@ MIN_WAV_BYTES = 44
 
 app = FastAPI(title="WaveMusic API", version="0.1.0")
 
+
+def _cors_origins() -> List[str]:
+    raw_origins = os.environ.get("WAVEMUSIC_CORS_ORIGINS", "")
+    origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+    return origins or ["*"]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins(),
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -133,6 +133,19 @@ cd webapp && npm run dev
 ```
 Then open `http://127.0.0.1:5173`.
 
+## Deployment
+
+Recommended public demo setup:
+
+- Backend: deploy the FastAPI/C++ engine container to Google Cloud Run.
+- Frontend: deploy the static TypeScript build to GitHub Pages.
+- Local mode: keep using `uv run main.py`; it serves the API and frontend from one local server.
+
+Deployment guides:
+
+- [Deploy backend to Google Cloud Run](docs/deploy-gcp.md)
+- [Deploy frontend to GitHub Pages](docs/deploy-github-pages.md)
+
 
 ## Roadmap
 

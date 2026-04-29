@@ -1,0 +1,13 @@
+.git
+.github
+.venv
+__pycache__
+*.pyc
+*.pyo
+.ruff_cache
+build
+dist
+*.egg-info
+*.wav
+webapp/node_modules
+webapp/dist

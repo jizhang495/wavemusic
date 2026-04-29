@@ -42,7 +42,11 @@ type ElementRef = {
 
 const waveforms: Waveform[] = ["triangle", "sine", "square", "sawtooth"];
 const scoreSplitPattern = /(?=\b(?:triangle|sine|square|saw|sawtooth):)/i;
+const configuredApiRoot = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 const apiRoots = (() => {
+  if (configuredApiRoot) {
+    return [configuredApiRoot];
+  }
   const hostname = window.location.hostname;
   if (window.location.protocol === "file:") {
     return ["http://127.0.0.1:8000"];
@@ -182,7 +186,8 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 function audioUrlWithCache(audioUrl: string): string {
-  const prefix = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+  const apiRoot = apiRoots[0] || "";
+  const prefix = apiRoot || (window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "");
   return `${prefix}${audioUrl}?_=${Date.now()}`;
 }
 
