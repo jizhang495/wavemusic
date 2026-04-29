@@ -50,6 +50,9 @@ score_t parse(std::string str_in) {
 
     for (; iter != end; ++iter) {
         std::string token = *iter;
+        if (token.empty()) {
+            continue;
+        }
         // instrument headers
         if (token.back() == ':') {
             if (token == "sine:") {
@@ -148,6 +151,10 @@ int playscore(int argc, char **argv) {
     // TODO: add persistent length settings
     std::ifstream f_score;
     f_score.open(score_filename);
+    if (!f_score.is_open()) {
+        std::cerr << "unable to open score file: " << score_filename << std::endl;
+        return 1;
+    }
     std::stringstream sstr_in;
     sstr_in << f_score.rdbuf();
     f_score.close();
