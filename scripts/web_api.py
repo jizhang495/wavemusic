@@ -93,6 +93,14 @@ def _load_sheet_file(filename: str) -> Path:
     return SHEETS_DIR / safe_name
 
 
+def _audio_file(filename: str) -> Path:
+    raw_name = (filename or "").strip()
+    safe_name = Path(raw_name).name
+    if not safe_name or safe_name != raw_name or not safe_name.lower().endswith(".wav"):
+        raise HTTPException(status_code=400, detail="Invalid audio filename.")
+    return GENERATED_DIR / safe_name
+
+
 def _normalize_waveform(waveform: str) -> str:
     normalized = (waveform or DEFAULT_WAVEFORM).strip().lower()
     if normalized == "saw":

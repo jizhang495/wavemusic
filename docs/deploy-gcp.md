@@ -15,7 +15,7 @@ Set your project and region:
 ```bash
 gcloud auth login
 gcloud config set project YOUR_PROJECT_ID
-gcloud config set run/region us-central1
+gcloud config set run/region europe-west2
 ```
 
 Enable required APIs:
@@ -24,21 +24,34 @@ Enable required APIs:
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
 ```
 
-Deploy from the repo root:
+Deploy from the repo root.
+
+PowerShell:
+
+```powershell
+gcloud run deploy wavemusic-api `
+  --source . `
+  --allow-unauthenticated `
+  --set-env-vars "^|^WAVEMUSIC_CORS_ORIGINS=https://jizhang495.github.io,http://127.0.0.1:5173"
+```
+
+Bash:
 
 ```bash
 gcloud run deploy wavemusic-api \
   --source . \
   --allow-unauthenticated \
-  --set-env-vars WAVEMUSIC_CORS_ORIGINS=https://YOUR_GITHUB_USERNAME.github.io,http://127.0.0.1:5173
+  --set-env-vars '^|^WAVEMUSIC_CORS_ORIGINS=https://jizhang495.github.io,http://127.0.0.1:5173'
 ```
+
+The `^|^` prefix tells `gcloud` to use `|` as the separator between environment variables, so the comma stays inside the `WAVEMUSIC_CORS_ORIGINS` value.
 
 If you use a custom GitHub Pages domain, set `WAVEMUSIC_CORS_ORIGINS` to that origin instead.
 
 Cloud Run will print a service URL like:
 
 ```text
-https://wavemusic-api-xxxxx-uc.a.run.app
+https://wavemusic-api-xxxxx-ew.a.run.app
 ```
 
 Use that URL as the GitHub repository variable `WAVEMUSIC_API_BASE_URL`.
