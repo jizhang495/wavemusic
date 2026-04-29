@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -24,6 +25,10 @@ GENERATED_DIR = Path(
     os.environ.get("WAVEMUSIC_GENERATED_DIR", str(Path(tempfile.gettempdir()) / "wavemusic"))
 )
 DIST_DIR = BASE_DIR / "webapp" / "dist"
+GENERATED_TTL_SECONDS = int(os.environ.get("WAVEMUSIC_GENERATED_TTL_SECONDS", "3600"))
+GENERATED_CLEANUP_INTERVAL_SECONDS = int(
+    os.environ.get("WAVEMUSIC_GENERATED_CLEANUP_INTERVAL_SECONDS", "300")
+)
 
 SHEETS_DIR.mkdir(exist_ok=True)
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
@@ -33,6 +38,9 @@ DEFAULT_WAVEFORM = "triangle"
 PART_COUNT = 4
 SCORE_SPLIT_PATTERN = re.compile(r"(?=\b(?:triangle|sine|square|saw|sawtooth):)", re.IGNORECASE)
 MIN_WAV_BYTES = 44
+GENERATED_SUFFIXES = {".wav", ".wmusic"}
+_last_generated_cleanup = 0.0
+_render_lock = threading.Lock()
 
 app = FastAPI(title="WaveMusic API", version="0.1.0")
 
@@ -126,12 +134,30 @@ def _split_parts(score_text: str) -> List["Part"]:
     return result
 
 
-def _score_file(filename: str) -> Path:
-    return SHEETS_DIR / _safe_sheet_name(filename, fallback=f"{uuid.uuid4().hex}.wmusic")
+def _cleanup_generated_files() -> None:
+    global _last_generated_cleanup
+
+    now = time.time()
+    if GENERATED_TTL_SECONDS <= 0:
+        return
+    if now - _last_generated_cleanup < GENERATED_CLEANUP_INTERVAL_SECONDS:
+        return
+
+    _last_generated_cleanup = now
+    cutoff = now - GENERATED_TTL_SECONDS
+    for path in GENERATED_DIR.iterdir():
+        if not path.is_file() or path.suffix.lower() not in GENERATED_SUFFIXES:
+            continue
+        try:
+            if path.stat().st_mtime < cutoff:
+                path.unlink()
+        except OSError:
+            pass
 
 
-def _audio_file(filename: str) -> Path:
-    return GENERATED_DIR / _safe_wav_name(filename, fallback=f"{uuid.uuid4().hex}.wav")
+def _temp_render_paths() -> tuple[Path, Path]:
+    stem = f"render-{int(time.time())}-{uuid.uuid4().hex}"
+    return GENERATED_DIR / f"{stem}.wmusic", GENERATED_DIR / f"{stem}.wav"
 
 
 def _wav_has_audio(path: Path) -> bool:
@@ -149,31 +175,30 @@ def _render_score_to_file(
     if not score_text.strip():
         raise HTTPException(status_code=400, detail="Score is empty.")
 
-    audio_path = _audio_file(filename)
-    score_path = GENERATED_DIR / f"{audio_path.stem}.wmusic"
-    score_path.write_text(score_text + "\n", encoding="utf-8")
+    _cleanup_generated_files()
+    score_path, audio_path = _temp_render_paths()
 
-    if audio_path.exists():
-        audio_path.unlink()
+    with _render_lock:
+        score_path.write_text(score_text + "\n", encoding="utf-8")
 
-    if use_cpp:
-        render_started_at = time.time()
-        try:
-            main_pybind(["1", str(score_path), "--no-play", f"--out={audio_path}"])
-        except Exception:
-            pass
+        if use_cpp:
+            render_started_at = time.time()
+            try:
+                main_pybind(["1", str(score_path), "--no-play", f"--out={audio_path}"])
+            except Exception:
+                pass
 
-        if not _wav_has_audio(audio_path):
-            fallback_candidates = [GENERATED_DIR / "m.wav", BASE_DIR / "m.wav"]
-            for candidate in fallback_candidates:
-                if _wav_has_audio(candidate) and candidate.stat().st_mtime >= render_started_at:
-                    shutil.copyfile(candidate, audio_path)
-                    break
+            if not _wav_has_audio(audio_path):
+                fallback_candidates = [GENERATED_DIR / "m.wav", BASE_DIR / "m.wav"]
+                for candidate in fallback_candidates:
+                    if _wav_has_audio(candidate) and candidate.stat().st_mtime >= render_started_at:
+                        shutil.copyfile(candidate, audio_path)
+                        break
 
-        if not _wav_has_audio(audio_path):
+            if not _wav_has_audio(audio_path):
+                Music(score_text).write_wav(filename=str(audio_path), sample_rate=sample_rate, bpm=bpm)
+        else:
             Music(score_text).write_wav(filename=str(audio_path), sample_rate=sample_rate, bpm=bpm)
-    else:
-        Music(score_text).write_wav(filename=str(audio_path), sample_rate=sample_rate, bpm=bpm)
 
     if not _wav_has_audio(audio_path):
         raise HTTPException(status_code=500, detail="Failed to generate WAV output.")
@@ -242,9 +267,10 @@ def load_sheet(filename: str):
 
 @app.post("/api/sheets", response_model=ScoreResponse)
 def save_sheet(payload: SaveRequest):
-    path = _score_file(payload.filename)
-    path.write_text(payload.score, encoding="utf-8")
-    return ScoreResponse(filename=path.name, score=payload.score, parts=_split_parts(payload.score))
+    raise HTTPException(
+        status_code=405,
+        detail="Server-side score saving is disabled. Use the browser Save score button to save locally.",
+    )
 
 
 @app.post("/api/render", response_model=RenderResponse)
@@ -262,7 +288,7 @@ def render_score(payload: RenderRequest):
     )
 
     return RenderResponse(
-        filename=audio_path.name,
+        filename=_safe_wav_name(payload.filename, fallback="m.wav"),
         audio_url=f"/api/audio/{audio_path.name}",
         score=score_text,
         use_cpp=payload.use_cpp,
