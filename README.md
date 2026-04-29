@@ -25,6 +25,27 @@ uv run main.py
 ```
 Open http://127.0.0.1:8000.
 
+## Music File Format
+
+WaveMusic stores projects as JSON files in `sheets/`:
+
+```json
+{
+  "bpm": 100,
+  "sample_rate": 44100,
+  "parts": [
+    {
+      "name": "lead",
+      "waveform": "square",
+      "score": ["2c4 g e f | 4g 4r"]
+    }
+  ]
+}
+```
+
+The `score` field keeps the compact note syntax. The JSON wrapper stores
+project metadata and per-part settings.
+
 ## Architecture
 
 - C++ audio engine
@@ -82,14 +103,17 @@ Architecture of audio engine
 To build and run directly:
 ```bash
 make simple
-./simple sheets/<title>.wmusic
+./simple /tmp/wavemusic-main.score
 ```
 
 for debug mode:
 ```bash
 make refresh DEBUG=1
-./simple sheets/<title>.wmusic
+./simple /tmp/wavemusic-main.score
 ```
+
+The C++ executable renders the internal score stream. Normal project files are
+JSON and should be rendered through `main.py` or the web app.
 
 ### Python API Layer
 
@@ -108,9 +132,9 @@ To use command-line interface:
 ```bash
 uv run main.py cli
 ```
-To generate WAV from score:
+To generate WAV from a JSON project:
 ```bash
-uv run main.py sheets/<title>.wmusic
+uv run main.py sheets/<title>.json
 ```
 
 ### Web frontend
@@ -158,7 +182,7 @@ Python TODO list:
  - [x] add waveforms.py to store functions for each waveform
  - [ ] add Entry with up/down for transpose
  - [ ] use () to pass frequecies or chords
- - [ ] add bpm and sample rate selection
+ - [x] add bpm and sample rate selection
  - [ ] use numpy for faster performance
  - [ ] the functions can be added to produce complex timber and polyphony
  - [ ] add loudness: ff, f, fp, p, pp

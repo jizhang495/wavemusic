@@ -9,6 +9,7 @@
 #include <regex>
 #include <cstdint> // added for uint8_t, uint32_t, etc.
 #include <string>
+#include <cctype>
 
 #include "sigen.h"
 
@@ -22,8 +23,8 @@ typedef struct Wav_Header {
     uint32_t fmt_size      = 16;
     uint16_t wav_format    = 1;                  // PCM
     uint16_t channel_cnt   = 1;
-    uint32_t sample_freq   = S_RATE;
-    uint32_t data_rate     = S_RATE * 2;         // 2 bytes per sample
+    uint32_t sample_freq   = DEFAULT_SAMPLE_RATE;
+    uint32_t data_rate     = DEFAULT_SAMPLE_RATE * 2; // 2 bytes per sample
     uint16_t block_align   = 2;                  // 16-bit mono
     uint16_t bits_per_samp = 16;
     uint8_t  data[4]       = {'d', 'a', 't', 'a'};
@@ -94,12 +95,21 @@ score_t parse(std::string str_in) {
     return score;
 };
 
+void set_uint_arg(const std::string &value, uint32_t &target) {
+    try {
+        unsigned long parsed = std::stoul(value);
+        if (parsed > 0) {
+            target = static_cast<uint32_t>(parsed);
+        }
+    } catch (...) {}
+}
+
 int playscore(int argc, char **argv) {
     #ifdef DEBUG
     static_assert(sizeof(wav_hdr_t) == 44, "wav_hdr_t size error");
     #endif
 
-    std::string score_filename = "sheets/twsxxn.wmusic";
+    std::string score_filename;
     std::string output_filename = FILE_NAME;
     bool should_play = true;
 
@@ -121,19 +131,36 @@ int playscore(int argc, char **argv) {
             continue;
         }
 
-        if (score_filename == "sheets/twsxxn.wmusic") {
+        if (arg.rfind("--sample-rate=", 0) == 0) {
+            set_uint_arg(arg.substr(14), g_sample_rate);
+            continue;
+        }
+
+        if (arg.rfind("--bpm=", 0) == 0) {
+            set_uint_arg(arg.substr(6), g_bpm);
+            continue;
+        }
+
+        if (score_filename.empty()) {
             score_filename = arg;
         } else if (output_filename == FILE_NAME) {
             output_filename = arg;
         }
     }
 
+    if (score_filename.empty()) {
+        std::cerr << "score file required" << std::endl;
+        return 1;
+    }
+
     // write file
     wav_hdr_t wav_hdr;
+    wav_hdr.sample_freq = g_sample_rate;
+    wav_hdr.data_rate = g_sample_rate * 2;
     uint32_t data_size;
     std::vector<int16_t> pcm_data;
     std::vector<int16_t> pcm_out;
-    int ptr;
+    int ptr = 0;
 
     std::ofstream f;
     f.open(output_filename, std::ios::binary);
@@ -148,6 +175,10 @@ int playscore(int argc, char **argv) {
     // TODO: add persistent length settings
     std::ifstream f_score;
     f_score.open(score_filename);
+    if (!f_score) {
+        std::cerr << "could not open score file: " << score_filename << std::endl;
+        return 1;
+    }
     std::stringstream sstr_in;
     sstr_in << f_score.rdbuf();
     f_score.close();

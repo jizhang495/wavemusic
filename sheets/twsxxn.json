@@ -1,0 +1,41 @@
+{
+  "bpm": 100,
+  "sample_rate": 44100,
+  "parts": [
+    {
+      "name": "lead",
+      "waveform": "square",
+      "score": [
+        "1r",
+        "2e-4 2f4 2g4 2b-4 2g4 3g4 1r",
+        "1f4 1f4 2e-4 3f4 1r",
+        "2e-4 2c4 2e-4 2f4 5g4 3r",
+        "",
+        "2e-4 2c4 3e-4 1r",
+        "1b-3 1b-3 2f4 3e-4 1r",
+        "2g4 2f4 2f4 2e-4 4f4 2e- 2f 2b- 2g 3g 1r",
+        "1f 1f 2e- 3f 1r",
+        "2e- 2c 2e- 2b- 5g 3r",
+        "",
+        "2e- 2c 3e- 1r",
+        "1b-3 1b-3 2f4 3e- 1r",
+        "2g 2f 2e- 2c 4e-"
+      ]
+    },
+    {
+      "name": "part 2",
+      "waveform": "triangle",
+      "score": []
+    },
+    {
+      "name": "part 3",
+      "waveform": "triangle",
+      "score": []
+    },
+    {
+      "name": "part 4",
+      "waveform": "triangle",
+      "score": []
+    }
+  ]
+}

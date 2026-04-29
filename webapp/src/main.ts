@@ -3,8 +3,21 @@ import "./styles.css";
 type Waveform = "triangle" | "sine" | "square" | "sawtooth";
 
 interface PartPayload {
+  name: string;
   waveform: Waveform;
   score: string;
+}
+
+interface ProjectPartPayload {
+  name?: string;
+  waveform?: string;
+  score?: string | string[];
+}
+
+interface MusicProject {
+  bpm: number;
+  sample_rate: number;
+  parts: ProjectPartPayload[];
 }
 
 interface RenderRequest {
@@ -31,17 +44,18 @@ interface RenderResponse {
 
 interface ScorePayload {
   filename: string;
-  score: string;
+  bpm: number;
+  sample_rate: number;
   parts: PartPayload[];
 }
 
 type ElementRef = {
+  name: HTMLInputElement;
   waveform: HTMLSelectElement;
   score: HTMLTextAreaElement;
 };
 
 const waveforms: Waveform[] = ["triangle", "sine", "square", "sawtooth"];
-const scoreSplitPattern = /(?=\b(?:triangle|sine|square|saw|sawtooth):)/i;
 const configuredApiRoot = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 const apiRoots = (() => {
   if (configuredApiRoot) {
@@ -88,7 +102,7 @@ container.innerHTML = `
     </label>
     <button id="load-sheet" type="button">Load sample</button>
     <button id="load-local-score" type="button">Load from local</button>
-    <input id="local-score-file" type="file" accept=".wmusic" hidden />
+    <input id="local-score-file" type="file" accept=".json,application/json" hidden />
     <div class="status-field">
       <span>Status</span>
       <span id="status" class="status">Idle</span>
@@ -97,7 +111,7 @@ container.innerHTML = `
   <section class="toolbar settings-row">
     <label>
       <span>Save filename</span>
-      <input id="save-filename" value="untitled.wmusic" placeholder="untitled.wmusic" />
+      <input id="save-filename" value="untitled.json" placeholder="untitled.json" />
     </label>
     <button id="save-sheet" type="button">Save score</button>
     <label>
@@ -162,16 +176,40 @@ function clampBpm(value: number): number {
 }
 
 function partPayloads(): PartPayload[] {
-  return partRefs.map((ref) => ({
+  return partRefs.map((ref, index) => ({
+    name: ref.name.value.trim() || `part ${index + 1}`,
     waveform: ref.waveform.value as Waveform,
     score: ref.score.value.trim(),
   }));
 }
 
-function buildScoreText(): string {
-  return partPayloads()
-    .map(({ waveform, score }) => `${waveform}: ${score}`)
-    .join("\n");
+function scoreLines(value: string): string[] {
+  if (!value.trim()) {
+    return [];
+  }
+  return value.split(/\r?\n/).map((line) => line.trimEnd());
+}
+
+function scoreText(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map((line) => String(line)).join("\n").trim();
+  }
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  return "";
+}
+
+function buildProject(): MusicProject {
+  return {
+    bpm: clampBpm(Number(bpmElement.value)),
+    sample_rate: clampSampleRate(Number(sampleRateElement.value)),
+    parts: partRefs.map((ref, index) => ({
+      name: ref.name.value.trim() || `part ${index + 1}`,
+      waveform: ref.waveform.value,
+      score: scoreLines(ref.score.value),
+    })),
+  };
 }
 
 function ensureExtension(filename: string, extension: string): string {
@@ -192,7 +230,8 @@ function downloadBlob(blob: Blob, filename: string) {
 
 function audioUrlWithCache(audioUrl: string): string {
   const apiRoot = apiRoots[0] || "";
-  const prefix = apiRoot || (window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "");
+  const prefix = apiRoot
+    || (window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "");
   return `${prefix}${audioUrl}?_=${Date.now()}`;
 }
 
@@ -207,33 +246,51 @@ function normalizeWaveform(value: string): Waveform {
   return "triangle";
 }
 
-function parseScoreText(scoreText: string): PartPayload[] {
-  const blocks = scoreText.split(scoreSplitPattern).map((block) => block.trim()).filter(Boolean);
-  const parts: PartPayload[] = [];
-
-  for (let index = 0; index < 4; index += 1) {
-    const block = blocks[index] || "";
-    const delimiterIndex = block.indexOf(":");
-    if (delimiterIndex >= 0) {
-      parts.push({
-        waveform: normalizeWaveform(block.slice(0, delimiterIndex)),
-        score: block.slice(delimiterIndex + 1).trim(),
-      });
-    } else {
-      parts.push({ waveform: "triangle", score: block.trim() });
-    }
-  }
-
-  return parts;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function applyPartPayloads(parts: PartPayload[]) {
-  const normalized = [...parts];
+function normalizeProject(rawProject: unknown): Omit<ScorePayload, "filename"> {
+  if (!isRecord(rawProject)) {
+    throw new Error("Music JSON must be an object.");
+  }
+
+  const rawParts = Array.isArray(rawProject.parts) ? rawProject.parts : [];
+  const parts: PartPayload[] = [];
+  for (let index = 0; index < 4; index += 1) {
+    const rawPart = isRecord(rawParts[index]) ? rawParts[index] : {};
+    const name =
+      typeof rawPart.name === "string" && rawPart.name.trim()
+        ? rawPart.name.trim()
+        : `part ${index + 1}`;
+    const waveform = normalizeWaveform(
+      typeof rawPart.waveform === "string" ? rawPart.waveform : "",
+    );
+    parts.push({ name, waveform, score: scoreText(rawPart.score) });
+  }
+
+  return {
+    bpm: clampBpm(Number(rawProject.bpm)),
+    sample_rate: clampSampleRate(Number(rawProject.sample_rate)),
+    parts,
+  };
+}
+
+function applyProject(project: Omit<ScorePayload, "filename">) {
+  bpmElement.value = String(clampBpm(project.bpm));
+  sampleRateElement.value = String(clampSampleRate(project.sample_rate));
+
+  const normalized = [...project.parts];
   while (normalized.length < partRefs.length) {
-    normalized.push({ waveform: "triangle", score: "" });
+    normalized.push({
+      name: `part ${normalized.length + 1}`,
+      waveform: "triangle",
+      score: "",
+    });
   }
   normalized.slice(0, partRefs.length).forEach((part, index) => {
     const ref = partRefs[index];
+    ref.name.value = part.name || `part ${index + 1}`;
     ref.waveform.value = part.waveform;
     ref.score.value = part.score || "";
   });
@@ -322,8 +379,10 @@ async function loadSheet() {
     setStatus("Pick a sample score first.");
     return;
   }
-  const data = await apiGet<ScorePayload>(`/api/sheets/${encodeURIComponent(sheetSelect.value)}`);
-  applyPartPayloads(data.parts);
+  const data = await apiGet<ScorePayload>(
+    `/api/sheets/${encodeURIComponent(sheetSelect.value)}`,
+  );
+  applyProject(data);
   state.selectedSheet = data.filename;
   saveFilenameElement.value = data.filename;
   setStatus(`Loaded sample ${data.filename}`);
@@ -334,14 +393,14 @@ async function loadLocalScore() {
   if (!file) {
     return;
   }
-  if (!file.name.toLowerCase().endsWith(".wmusic")) {
-    setStatus("Choose a .wmusic score file.");
+  if (!file.name.toLowerCase().endsWith(".json")) {
+    setStatus("Choose a .json music file.");
     localScoreFileInput.value = "";
     return;
   }
 
-  const score = await file.text();
-  applyPartPayloads(parseScoreText(score));
+  const project = normalizeProject(JSON.parse(await file.text()));
+  applyProject(project);
   saveFilenameElement.value = file.name;
   state.selectedSheet = file.name;
   sheetSelect.value = "";
@@ -350,8 +409,11 @@ async function loadLocalScore() {
 }
 
 async function saveSheet() {
-  const filename = ensureExtension(saveFilenameElement.value, ".wmusic");
-  const blob = new Blob([`${buildScoreText()}\n`], { type: "text/plain;charset=utf-8" });
+  const filename = ensureExtension(saveFilenameElement.value, ".json");
+  const blob = new Blob(
+    [`${JSON.stringify(buildProject(), null, 2)}\n`],
+    { type: "application/json;charset=utf-8" },
+  );
   downloadBlob(blob, filename);
   setStatus(`Saved ${filename} to local`);
 }
@@ -424,8 +486,10 @@ function renderPartInputs() {
     const header = document.createElement("div");
     header.className = "part-header";
 
-    const label = document.createElement("span");
-    label.textContent = `Part ${i + 1}`;
+    const name = document.createElement("input");
+    name.type = "text";
+    name.value = `part ${i + 1}`;
+    name.ariaLabel = `Part ${i + 1} name`;
 
     const waveform = document.createElement("select");
     waveforms.forEach((value) => {
@@ -459,14 +523,14 @@ function renderPartInputs() {
       }
     });
 
-    header.appendChild(label);
+    header.appendChild(name);
     header.appendChild(waveform);
 
     section.appendChild(header);
     section.appendChild(textarea);
     partsContainer.appendChild(section);
 
-    partRefs.push({ waveform, score: textarea });
+    partRefs.push({ name, waveform, score: textarea });
   }
   syncPartEditorHeights();
 }

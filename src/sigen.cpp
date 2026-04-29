@@ -1,10 +1,14 @@
 #include <cmath>
+#include <cstddef>
 #ifdef DEBUG
 #include <iomanip>
 #include <cassert>
 #endif
 #include <cstdint> // added for uint8_t, uint32_t, etc.
 #include "sigen.h"
+
+uint32_t g_sample_rate = DEFAULT_SAMPLE_RATE;
+uint32_t g_bpm = DEFAULT_BPM;
 
 f_lut_t note_t::construct_lut() {
     f_lut_t f_lut = {
@@ -38,7 +42,7 @@ std::vector<int16_t> lowpass(std::vector<int16_t> &pcm_data) {
     // time constant RC = 1/(2πf)
     const float RC = 1/(2*M_PI*LPF_FC);
     // smoothing factor α = dt/(RC+dt)
-    const float alpha = 1 / (RC*S_RATE + 1);
+    const float alpha = 1 / (RC*g_sample_rate + 1);
     int16_t prev_out = 0;
     // y[i] = α * x[i] + (1-α) * y[i-1]
     for (const auto &sample: pcm_data) {
@@ -52,8 +56,8 @@ std::vector<int16_t> lowpass(std::vector<int16_t> &pcm_data) {
 float filter(int i, int s_len) {
     // assume 99% volume change by 0.02s
     // k = -0.02/ln(0.01) = 0.004343
-    static float k = -(0.02*S_RATE/log(0.01));
-    static int atk_start  = 0.02*S_RATE;
+    float k = -(0.02*g_sample_rate/log(0.01));
+    int atk_start  = 0.02*g_sample_rate;
     #ifdef DEBUG
     assert(s_len > 2*atk_start);
     #endif
@@ -87,21 +91,24 @@ void play(std::vector<int16_t> &pcm_data, int &ptr, shape_t shape,
 
     #ifdef DEBUG
     assert(length != 0);
-    if (shape != none) { assert(freq != 0.0); }
+    if (shape != shape_t::none) { assert(freq != 0.0); }
     #endif
 
     float wave = 0.0;
     float gain;
     int16_t pcm_out;
-    static float smqvr = 15.0/BPM;
-    int s_len      = rint(smqvr*length*S_RATE); // length in number of samples
+    float smqvr = 15.0/g_bpm;
+    int s_len      = rint(smqvr*length*g_sample_rate); // length in number of samples
     bool sign      = true;
-    float period   = S_RATE/freq;
+    float period   = g_sample_rate/freq;
     float gradient = 2.0/period;
     float count    = 0.0;
 
     #ifdef DEBUG
-    assert(first || ((ptr + s_len - 1) < pcm_data.size()));
+    assert(first || (
+        (ptr + s_len - 1) >= 0 &&
+        static_cast<std::size_t>(ptr + s_len - 1) < pcm_data.size()
+    ));
     #endif
     for (int i = 0; i < s_len; ++i) {
         // generate base signal
@@ -111,7 +118,7 @@ void play(std::vector<int16_t> &pcm_data, int &ptr, shape_t shape,
                 break;
 
             case shape_t::sine:
-                wave = (float)SIN_AMP * sin(2.0*M_PI*freq*i/S_RATE);
+                wave = (float)SIN_AMP * sin(2.0*M_PI*freq*i/g_sample_rate);
                 break;
 
             case shape_t::square:
@@ -171,11 +178,11 @@ void play(std::vector<int16_t> &pcm_data, int &ptr, shape_t shape,
 #ifdef DEBUG
 std::ostream &operator<<(std::ostream &os, shape_t shape) {
     switch (shape) {
-        case none:     return os << "rest";
-        case sine:     return os << "sine" ;
-        case square:   return os << "square";
-        case triangle: return os << "triangle";
-        case saw:      return os << "saw";
+        case shape_t::none:     return os << "rest";
+        case shape_t::sine:     return os << "sine" ;
+        case shape_t::square:   return os << "square";
+        case shape_t::triangle: return os << "triangle";
+        case shape_t::saw:      return os << "saw";
     };
     return os << "error";
 }

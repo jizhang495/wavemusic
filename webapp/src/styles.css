@@ -157,10 +157,16 @@ body {
   margin-bottom: 0.45rem;
 }
 
-.part-header select {
-  max-width: 150px;
+.part-header input {
+  min-width: 0;
+  flex: 1;
 }
 
+.part-header select {
+  max-width: 135px;
+}
+
+.part input,
 .part select,
 .part textarea {
   width: 100%;

@@ -13,8 +13,8 @@
 #endif
 
 
-#define S_RATE 44100
-#define BPM 100
+#define DEFAULT_SAMPLE_RATE 44100
+#define DEFAULT_BPM 100
 // Amplitudes defined for constant RMS
 #define SIN_AMP 2828
 #define SQR_AMP 2000
@@ -22,6 +22,9 @@
 #define SAW_AMP 3464
 // cut off frequency of LPF
 #define LPF_FC 10000
+
+extern uint32_t g_sample_rate;
+extern uint32_t g_bpm;
 
 enum class shape_t: uint8_t {none, sine, square, triangle, saw};
 typedef std::unordered_map<std::string, float> f_lut_t;

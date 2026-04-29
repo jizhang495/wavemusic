@@ -1,0 +1,35 @@
+{
+  "bpm": 100,
+  "sample_rate": 44100,
+  "parts": [
+    {
+      "name": "melody",
+      "waveform": "square",
+      "score": [
+        "2c5 g4 c5 4g f 2e | 2d b4 4r g f |",
+        "2b g b 4e5 d 2b4 | c5 e 4r g4 d |"
+      ]
+    },
+    {
+      "name": "countermelody",
+      "waveform": "square",
+      "score": [
+        "2e4 d+ e 4c5 2b4 a g | a g f e d e d g |",
+        "g d g 4b 2a g f | e g a b c5 b4 a g |"
+      ]
+    },
+    {
+      "name": "bass",
+      "waveform": "square",
+      "score": [
+        "2c3 e c e c e f e | d g d g d g d g |",
+        "d g d g d g f g | e g e g e g f g |"
+      ]
+    },
+    {
+      "name": "part 4",
+      "waveform": "triangle",
+      "score": []
+    }
+  ]
+}
