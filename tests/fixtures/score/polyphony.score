@@ -1,5 +1,5 @@
-square:
+wave 0 1 0 0:
 2c4 e g c5 | 2g e c4 r
 
-triangle:
+wave 0 0 1 0:
 2c3 g c4 g | 2c3 g c4 g

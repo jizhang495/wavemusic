@@ -1,11 +1,25 @@
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-ALLOWED_WAVEFORMS = ("triangle", "sine", "square", "sawtooth")
+WAVE_ORDER = ("sine", "square", "triangle", "saw")
+WAVE_PRESETS = {
+    "sine": {"sine": 1.0, "square": 0.0, "triangle": 0.0, "saw": 0.0},
+    "square": {"sine": 0.0, "square": 1.0, "triangle": 0.0, "saw": 0.0},
+    "triangle": {"sine": 0.0, "square": 0.0, "triangle": 1.0, "saw": 0.0},
+    "saw": {"sine": 0.0, "square": 0.0, "triangle": 0.0, "saw": 1.0},
+    "soft organ": {"sine": 0.55, "square": 0.10, "triangle": 0.35, "saw": 0.0},
+    "warm synth organ": {
+        "sine": 0.40,
+        "square": 0.15,
+        "triangle": 0.30,
+        "saw": 0.15,
+    },
+}
 DEFAULT_WAVEFORM = "triangle"
 DEFAULT_BPM = 100
 DEFAULT_SAMPLE_RATE = 44100
@@ -28,13 +42,85 @@ def clamp_int(value: Any, *, default: int, minimum: int, maximum: int) -> int:
     return parsed
 
 
-def normalize_waveform(waveform: Any) -> str:
-    normalized = str(waveform or DEFAULT_WAVEFORM).strip().lower()
-    if normalized == "saw":
-        return "sawtooth"
-    if normalized not in ALLOWED_WAVEFORMS:
-        return DEFAULT_WAVEFORM
-    return normalized
+def clamp_float(value: Any, *, default: float, minimum: float, maximum: float) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return default
+
+    if not math.isfinite(parsed):
+        return default
+    if parsed < minimum:
+        return minimum
+    if parsed > maximum:
+        return maximum
+    return parsed
+
+
+def normalize_waveform_preset(value: Any) -> str:
+    preset = str(value or DEFAULT_WAVEFORM).strip().lower().replace("_", " ")
+    if preset == "sawtooth":
+        return "saw"
+    if preset in WAVE_PRESETS or preset == "custom":
+        return preset
+    return DEFAULT_WAVEFORM
+
+
+def normalize_wave_mix(
+    value: Any,
+    *,
+    fallback: Mapping[str, float] | None = None,
+) -> dict[str, float]:
+    fallback = fallback or WAVE_PRESETS[DEFAULT_WAVEFORM]
+    if isinstance(value, Mapping):
+        return {
+            name: clamp_float(
+                value.get(name),
+                default=fallback.get(name, 0.0),
+                minimum=0.0,
+                maximum=1.0,
+            )
+            for name in WAVE_ORDER
+        }
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
+        return {
+            name: clamp_float(
+                value[index] if index < len(value) else None,
+                default=fallback.get(name, 0.0),
+                minimum=0.0,
+                maximum=1.0,
+            )
+            for index, name in enumerate(WAVE_ORDER)
+        }
+    return dict(fallback)
+
+
+def normalize_waveform(waveform: Any) -> str | dict[str, Any]:
+    if isinstance(waveform, Mapping):
+        preset = normalize_waveform_preset(waveform.get("preset"))
+        if preset == "custom":
+            return {
+                "preset": "custom",
+                "mix": normalize_wave_mix(
+                    waveform.get("mix"),
+                    fallback=WAVE_PRESETS["warm synth organ"],
+                ),
+            }
+        return preset
+    return normalize_waveform_preset(waveform)
+
+
+def waveform_mix(waveform: Any) -> dict[str, float]:
+    normalized = normalize_waveform(waveform)
+    if isinstance(normalized, Mapping):
+        return normalize_wave_mix(normalized.get("mix"))
+    return dict(WAVE_PRESETS.get(normalized, WAVE_PRESETS[DEFAULT_WAVEFORM]))
+
+
+def waveform_header(waveform: Any) -> str:
+    mix = waveform_mix(waveform)
+    values = " ".join(f"{mix[name]:g}" for name in WAVE_ORDER)
+    return f"wave {values}:"
 
 
 def score_lines(score: Any) -> list[str]:
@@ -134,10 +220,10 @@ def compose_score(parts: Sequence[Any]) -> str:
 
     blocks = []
     for part in normalized_parts:
-        waveform = normalize_waveform(_field(part, "waveform"))
+        waveform = waveform_header(_field(part, "waveform"))
         part_text = part_score_text(part)
         if part_text:
-            blocks.append(f"{waveform}:\n{part_text}")
+            blocks.append(f"{waveform}\n{part_text}")
         else:
-            blocks.append(f"{waveform}:")
+            blocks.append(waveform)
     return "\n\n".join(blocks)

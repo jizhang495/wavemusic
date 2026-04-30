@@ -28,7 +28,7 @@
     },
     {
       "name": "part 4",
-      "waveform": "sawtooth",
+      "waveform": "saw",
       "score": [
         "24r 4a3 4a4"
       ]

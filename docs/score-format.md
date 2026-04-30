@@ -13,24 +13,32 @@ receive a strict `.score` stream that is already safe to parse.
 A `.score` file is a sequence of waveform sections:
 
 ```text
-square:
+wave 0 1 0 0:
 2c4 g e f | 4g 4r
 
-triangle:
+wave 0 0 1 0:
 2c3 g c4 g
 ```
 
 Each section starts with one waveform header:
 
 ```text
+wave <sine> <square> <triangle> <saw>:
+```
+
+The four values are weights from `0` to `1`. The C++ engine normalizes them, so
+`wave 1 1 1 1:` changes tone without making the output four times louder.
+
+Named legacy headers are still accepted by the C++ parser for convenience:
+
+```text
 sine:
 square:
 triangle:
-sawtooth:
+saw:
 ```
 
-The legacy alias `saw:` is currently accepted, but Python should emit
-`sawtooth:`.
+Python should emit `wave ...:` headers.
 
 ## Notes
 
@@ -58,7 +66,7 @@ Rules:
 - `r` is a rest.
 - `|` is allowed as a visual barline and has no render effect.
 - Whitespace separates tokens.
-- Python should emit lower-case notes and waveform names.
+- Python should emit lower-case notes and `wave ...:` headers.
 
 For deterministic rendering, Python should ensure the first note-like token in
 each non-empty section includes both length and octave, for example `2c4` or
@@ -69,7 +77,8 @@ tokens in that section.
 
 Before writing `.score`, Python should:
 
-- Normalize waveform names to `sine`, `square`, `triangle`, or `sawtooth`.
+- Normalize waveform presets and custom mixes to `wave <sine> <square>
+  <triangle> <saw>:` headers.
 - Drop or reject unsupported score tokens.
 - Ensure every rendered part starts with a valid waveform header.
 - Ensure the first note/rest in a non-empty part establishes length and octave.

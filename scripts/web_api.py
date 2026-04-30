@@ -9,6 +9,7 @@ import time
 import uuid
 from pathlib import Path
 import re
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -214,7 +215,7 @@ def _render_score_to_file(
 
 class Part(BaseModel):
     name: str = Field(default="")
-    waveform: str = Field(default=DEFAULT_WAVEFORM)
+    waveform: Any = Field(default=DEFAULT_WAVEFORM)
     score: str = Field(default="")
 
 
@@ -234,7 +235,7 @@ class RenderRequest(BaseModel):
 
 
 class PreviewRequest(BaseModel):
-    waveform: str = Field(default=DEFAULT_WAVEFORM)
+    waveform: Any = Field(default=DEFAULT_WAVEFORM)
     line: str = Field(default="")
     sample_rate: int = Field(default=DEFAULT_SAMPLE_RATE)
     bpm: int = Field(default=DEFAULT_BPM)

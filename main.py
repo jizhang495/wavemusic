@@ -85,7 +85,7 @@ def main(*args):
             print(f"Score loaded from {project_file}")
         except FileNotFoundError:
             print(f"File {project_file} not found. Using default score.")
-            score = "triangle:\n2c4 2d 2e 2f | 4g 4r"
+            score = "wave 0 0 1 0:\n2c4 2d 2e 2f | 4g 4r"
             bpm = DEFAULT_BPM
             sample_rate = DEFAULT_SAMPLE_RATE
         except ValueError as e:
@@ -93,19 +93,20 @@ def main(*args):
             return
         print(score)
         try:
-            score_path = Path(tempfile.gettempdir()) / "wavemusic-main.score"
-            score_path.write_text(score + "\n", encoding="utf-8")
-            engine_args = [
-                "1",
-                str(score_path),
-                f"--sample-rate={sample_rate}",
-                f"--bpm={bpm}",
-            ]
-            if not should_play:
-                engine_args.append("--no-play")
-            if output_filename:
-                engine_args.append(f"--out={output_filename}")
-            main_pybind(engine_args)
+            with tempfile.TemporaryDirectory(prefix="wavemusic-") as score_dir:
+                score_path = Path(score_dir) / "main.score"
+                score_path.write_text(score + "\n", encoding="utf-8")
+                engine_args = [
+                    "1",
+                    str(score_path),
+                    f"--sample-rate={sample_rate}",
+                    f"--bpm={bpm}",
+                ]
+                if not should_play:
+                    engine_args.append("--no-play")
+                if output_filename:
+                    engine_args.append(f"--out={output_filename}")
+                main_pybind(engine_args)
             print("Rendered score." if not should_play else "Playing score...")
             return
         except Exception as e:

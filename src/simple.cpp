@@ -10,6 +10,8 @@
 #include <cstdint> // added for uint8_t, uint32_t, etc.
 #include <string>
 #include <cctype>
+#include <cstdlib>
+#include <cmath>
 
 #include "sigen.h"
 
@@ -33,6 +35,68 @@ typedef struct Wav_Header {
 
 typedef std::vector<std::vector<note_t>> score_t;
 
+wave_t make_wave(float sine, float square, float triangle, float saw) {
+    return {sine, square, triangle, saw};
+}
+
+wave_t preset_wave(const std::string &name) {
+    if (name == "sine") {
+        return make_wave(1.0f, 0.0f, 0.0f, 0.0f);
+    } else if (name == "square") {
+        return make_wave(0.0f, 1.0f, 0.0f, 0.0f);
+    } else if (name == "triangle") {
+        return make_wave(0.0f, 0.0f, 1.0f, 0.0f);
+    } else if (name == "saw" || name == "sawtooth") {
+        return make_wave(0.0f, 0.0f, 0.0f, 1.0f);
+    }
+    return make_wave(0.0f, 0.0f, 1.0f, 0.0f);
+}
+
+wave_t rest_wave() {
+    return make_wave(0.0f, 0.0f, 0.0f, 0.0f);
+}
+
+std::string lower_token(std::string token) {
+    for (auto &c: token) {
+        c = std::tolower(static_cast<unsigned char>(c));
+    }
+    return token;
+}
+
+bool strip_trailing_colon(std::string &token) {
+    if (!token.empty() && token.back() == ':') {
+        token.pop_back();
+        return true;
+    }
+    return false;
+}
+
+float parse_wave_weight(std::string token) {
+    strip_trailing_colon(token);
+    char *end = nullptr;
+    float value = std::strtof(token.c_str(), &end);
+    if (end == token.c_str()) {
+        return 0.0f;
+    }
+    if (!std::isfinite(value)) {
+        return 0.0f;
+    }
+    if (value < 0.0f) {
+        return 0.0f;
+    }
+    if (value > 1.0f) {
+        return 1.0f;
+    }
+    return value;
+}
+
+void push_stave_if_needed(score_t &score, std::vector<note_t> &stave) {
+    if (!stave.empty()) {
+        score.push_back(stave);
+        stave.clear();
+    }
+}
+
 // parse input string to score_t
 score_t parse(std::string str_in) {
     std::regex rgx_delim("[\\s|\\|]+");
@@ -40,40 +104,52 @@ score_t parse(std::string str_in) {
     std::smatch matches;
     std::vector<note_t> stave;
     std::vector<std::vector<note_t>> score;
+    std::vector<std::string> tokens;
 
     std::sregex_token_iterator iter(str_in.begin(), str_in.end(), rgx_delim, -1);
     std::sregex_token_iterator end;
 
-    shape_t s = shape_t::none;
+    for (; iter != end; ++iter) {
+        std::string token = *iter;
+        if (!token.empty()) {
+            tokens.push_back(token);
+        }
+    }
+
+    wave_t w = rest_wave();
     int l = 0;
     std::string n;
     int o = 4;
 
-    for (; iter != end; ++iter) {
-        std::string token = *iter;
+    for (std::size_t i = 0; i < tokens.size(); ++i) {
+        std::string token = tokens[i];
+        std::string header = lower_token(token);
         // instrument headers
-        if (token.back() == ':') {
-            if (token == "sine:") {
-                s = shape_t::sine;
-            } else if (token == "square:") {
-                s = shape_t::square;
-            } else if (token == "triangle:") {
-                s = shape_t::triangle;
-            } else if (token == "saw:") {
-                s = shape_t::saw;
-            } else if (token == "sawtooth:") {
-                s = shape_t::saw;
-            }
-            if (!stave.empty()) {
-                score.push_back(stave);
-                stave.clear();
+        if (header == "wave" && i + 4 < tokens.size()) {
+            w = make_wave(
+                parse_wave_weight(tokens[i + 1]),
+                parse_wave_weight(tokens[i + 2]),
+                parse_wave_weight(tokens[i + 3]),
+                parse_wave_weight(tokens[i + 4])
+            );
+            push_stave_if_needed(score, stave);
+            i += 4;
+        } else if (header.back() == ':') {
+            strip_trailing_colon(header);
+            if (header == "sine" || header == "square" ||
+                header == "triangle" || header == "saw" ||
+                header == "sawtooth") {
+                w = preset_wave(header);
+                push_stave_if_needed(score, stave);
             }
         // notes
         } else {
             if (std::regex_match(token, matches, rgx_note)) {
                 // note name, allow lower case
                 n = matches[2];
-                for (auto &c: n) { c = std::toupper(c); }
+                for (auto &c: n) {
+                    c = std::toupper(static_cast<unsigned char>(c));
+                }
                 // length
                 if (matches[1] != "") { l = std::stoi(matches[1]); }
                 // octave
@@ -81,17 +157,14 @@ score_t parse(std::string str_in) {
 
                 // rests
                 if (n == "R") {
-                    stave.push_back({shape_t::none, l, n, o});
+                    stave.push_back({rest_wave(), l, n, o});
                 } else {
-                    stave.push_back({s, l, n, o});
+                    stave.push_back({w, l, n, o});
                 }
             }
         }
     }
-    if (!stave.empty()) {
-        score.push_back(stave);
-        stave.clear();
-    }
+    push_stave_if_needed(score, stave);
     return score;
 };
 

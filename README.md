@@ -1,5 +1,5 @@
 # WaveMusic
-Writing music audio files using sine, square, triangular and sawtooth wave
+Writing music audio files using sine, square, triangle, and saw waves.
 
 ## Quick Start
 
@@ -48,6 +48,26 @@ WaveMusic stores projects as JSON files in `sheets/`:
 
 The `score` field keeps the compact note syntax. The JSON wrapper stores
 project metadata and per-part settings.
+
+`waveform` can be a simple preset name such as `sine`, `square`, `triangle`,
+`saw`, `soft organ`, or `warm synth organ`. For custom timbre, use a mix of the
+four base waves:
+
+```json
+{
+  "name": "lead",
+  "waveform": {
+    "preset": "custom",
+    "mix": {
+      "sine": 0.4,
+      "square": 0.15,
+      "triangle": 0.3,
+      "saw": 0.15
+    }
+  },
+  "score": ["2c4 d e f | 4g r"]
+}
+```
 
 JSON is the project format because it is explicit, easy to validate, and maps
 directly to the web UI. It is also a better target for AI-generated music:

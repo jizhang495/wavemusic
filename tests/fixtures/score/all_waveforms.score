@@ -1,11 +1,11 @@
-triangle:
+wave 0 0 1 0:
 2c4 d e f | 2g a b c5
 
-sine:
+wave 1 0 0 0:
 2c4 d e f | 2g a b c5
 
-square:
+wave 0 1 0 0:
 2c4 d e f | 2g a b c5
 
-sawtooth:
+wave 0 0 0 1:
 2c4 d e f | 2g a b c5

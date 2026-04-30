@@ -170,7 +170,7 @@ body {
 }
 
 .part-header select {
-  max-width: 135px;
+  max-width: 155px;
 }
 
 .part input,
@@ -187,6 +187,28 @@ body {
 .part textarea {
   min-height: 130px;
   resize: none;
+}
+
+.custom-mix {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 0.55rem;
+}
+
+.mix-slider {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+}
+
+.mix-slider input {
+  padding: 0;
+}
+
+.mix-values {
+  font-size: 0.85rem;
 }
 
 .parts-resize-handle {

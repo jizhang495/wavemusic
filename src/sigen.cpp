@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstddef>
+#include <algorithm>
 #ifdef DEBUG
 #include <iomanip>
 #include <cassert>
@@ -27,9 +28,9 @@ f_lut_t note_t::construct_lut() {
 }
 
 // TODO: remove octave from class and calculate frequency before construction?
-note_t::note_t(shape_t s, int l, std::string n, int o) {
+note_t::note_t(wave_t w, int l, std::string n, int o) {
     static f_lut_t f_lut = construct_lut();
-    shape  = s;
+    wave   = w;
     length = l;
     name   = n;
     octave = o;
@@ -81,28 +82,37 @@ float filter(int i, int s_len) {
 
 // write one note with note_t
 void play(std::vector<int16_t> &pcm_data, int &ptr, note_t note, bool first) {
-    play(pcm_data, ptr, note.shape, note.length, note.freq, first);
+    play(pcm_data, ptr, note.wave, note.length, note.freq, first);
 }
 
 // write one note with note parameters
 // signal generator -> attack/release gain filter -> output
-void play(std::vector<int16_t> &pcm_data, int &ptr, shape_t shape,
+void play(std::vector<int16_t> &pcm_data, int &ptr, wave_t wave,
           int length, float freq, bool first) {
 
+    float total_weight = wave.sine + wave.square + wave.triangle + wave.saw;
     #ifdef DEBUG
     assert(length != 0);
-    if (shape != shape_t::none) { assert(freq != 0.0); }
+    if (total_weight > 0.0f) { assert(freq != 0.0); }
     #endif
 
-    float wave = 0.0;
+    float sample = 0.0;
     float gain;
     int16_t pcm_out;
     float smqvr = 15.0/g_bpm;
     int s_len      = rint(smqvr*length*g_sample_rate); // length in number of samples
-    bool sign      = true;
-    float period   = g_sample_rate/freq;
-    float gradient = 2.0/period;
-    float count    = 0.0;
+    float period   = total_weight > 0.0f ? g_sample_rate/freq : 1.0f;
+    float sine_weight = 0.0;
+    float square_weight = 0.0;
+    float triangle_weight = 0.0;
+    float saw_weight = 0.0;
+
+    if (total_weight > 0.0f) {
+        sine_weight = wave.sine / total_weight;
+        square_weight = wave.square / total_weight;
+        triangle_weight = wave.triangle / total_weight;
+        saw_weight = wave.saw / total_weight;
+    }
 
     #ifdef DEBUG
     assert(first || (
@@ -111,61 +121,29 @@ void play(std::vector<int16_t> &pcm_data, int &ptr, shape_t shape,
     ));
     #endif
     for (int i = 0; i < s_len; ++i) {
-        // generate base signal
-        switch (shape) {
-            case shape_t::none:
-                wave = 0;
-                break;
+        sample = 0.0;
+        if (total_weight > 0.0f) {
+            float phase = std::fmod(i, period) / period;
+            float sine = (float)SIN_AMP * sin(2.0*M_PI*freq*i/g_sample_rate);
+            float square = phase < 0.5f ? SQR_AMP : -SQR_AMP;
+            float triangle = (1.0f - 4.0f * std::fabs(phase - 0.5f)) * TRI_AMP;
+            float saw = (2.0f * phase - 1.0f) * SAW_AMP;
 
-            case shape_t::sine:
-                wave = (float)SIN_AMP * sin(2.0*M_PI*freq*i/g_sample_rate);
-                break;
-
-            case shape_t::square:
-                if (sign) {
-                    wave = SQR_AMP;
-                } else {
-                    wave = -SQR_AMP;
-                }
-
-                count += 2.0;
-                if (count > period) {
-                    count = 0.0;
-                    sign = !sign;
-                }
-                break;
-
-            case shape_t::triangle:
-                wave = count * gradient * TRI_AMP - TRI_AMP;
-                if (!sign) {
-                    wave = -wave;
-                }
-
-                count += 2.0;
-                if (count > period) {
-                    count = 0.0;
-                    sign = !sign;
-                }
-                break;
-
-            case shape_t::saw:
-                wave = count * gradient * SAW_AMP - SAW_AMP;
-                count += 1.0;
-                if (count > period) {
-                    count = 0.0;
-                }
-                break;
+            sample = sine_weight * sine
+                   + square_weight * square
+                   + triangle_weight * triangle
+                   + saw_weight * saw;
         }
 
         // apply attack/release filter
-        if (shape == shape_t::none) {
+        if (total_weight == 0.0f) {
             gain = 0;
         } else {
             gain = filter(i, s_len);
         }
 
         // write or overwrite data depending on if its first stave
-        pcm_out = gain * wave;
+        pcm_out = gain * sample;
         if (first) {
             pcm_data.push_back(pcm_out);
         } else {
@@ -176,19 +154,17 @@ void play(std::vector<int16_t> &pcm_data, int &ptr, shape_t shape,
 }
 
 #ifdef DEBUG
-std::ostream &operator<<(std::ostream &os, shape_t shape) {
-    switch (shape) {
-        case shape_t::none:     return os << "rest";
-        case shape_t::sine:     return os << "sine" ;
-        case shape_t::square:   return os << "square";
-        case shape_t::triangle: return os << "triangle";
-        case shape_t::saw:      return os << "saw";
-    };
-    return os << "error";
+std::ostream &operator<<(std::ostream &os, wave_t wave) {
+    os << "wave("
+       << wave.sine << ','
+       << wave.square << ','
+       << wave.triangle << ','
+       << wave.saw << ')';
+    return os;
 }
 
 std::ostream &operator<<(std::ostream &os, note_t const &note) {
-    os << std::setw(8) << note.shape
+    os << std::setw(28) << note.wave
        << std::setw(3) << note.length << ' '
        << std::left << std::setw(2) << note.name << std::right
        << std::setw(7) << std::fixed << std::setprecision(1) << note.freq

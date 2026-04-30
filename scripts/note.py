@@ -1,18 +1,16 @@
 import math
-from scripts.utils import (
-    is_integer,
-    note_name_to_freq,
-)
+from scripts.utils import note_name_to_freq
 from scripts.waveforms import (
+    saw_wave_n,
     sine_wave_n,
     square_wave_n,
     triangle_wave_n,
-    sawtooth_wave_n,
 )
 
 class Note:
     """ "length" is measured as multiples of a semiquaver
-    "note" takes either the note name or frequency (Hz) of the note (feature to be added)
+    "note" takes either the note name or frequency (Hz) of the note
+    (feature to be added)
     "r" is used as the note name of rests
     """
     def __init__(self, shape="t", length=2, name="r", octave=4):
@@ -58,15 +56,21 @@ class Note:
         else:
             if self.shape == "s": # sine wave
                 for n in range(frames):
-                    value.append(int(4000 * sine_wave_n(n, sample_rate, self.frequency)))
+                    value.append(
+                        int(4000 * sine_wave_n(n, sample_rate, self.frequency))
+                    )
             elif self.shape == "q": # square wave
                 for i in range(frames):
-                    value.append(int(1000 * square_wave_n(i, sample_rate, self.frequency)))
+                    value.append(
+                        int(1000 * square_wave_n(i, sample_rate, self.frequency))
+                    )
             elif self.shape == "t": # triangle wave
                 for i in range(frames):
-                    value.append(int(2000 * triangle_wave_n(i, sample_rate, self.frequency)))
-            elif self.shape == "w": # sawtooth wave
+                    value.append(
+                        int(2000 * triangle_wave_n(i, sample_rate, self.frequency))
+                    )
+            elif self.shape == "w": # saw wave
                 for i in range(frames):
-                    value.append(int(2000 * sawtooth_wave_n(i, sample_rate, self.frequency)))
+                    value.append(int(2000 * saw_wave_n(i, sample_rate, self.frequency)))
 
         return value

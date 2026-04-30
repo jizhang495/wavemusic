@@ -42,12 +42,12 @@ def triangle_wave_n(n, sample_rate, freq):
     else:
         return 1 - 2 * (phase - samples_per_cycle / 2) / samples_per_cycle
 
-def sawtooth_wave(t, freq):
+def saw_wave(t, freq):
     period = 1 / freq
     phase = t % period
     return 2 * (phase / period) - 1
 
-def sawtooth_wave_n(n, sample_rate, freq):
+def saw_wave_n(n, sample_rate, freq):
     samples_per_cycle = sample_rate / freq
     phase = n % samples_per_cycle
     return 2 * (phase / samples_per_cycle) - 1

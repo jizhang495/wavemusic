@@ -25,15 +25,15 @@ class Music:
 
         for n in notelist:
             n = n.strip()
-            # when encountering label words, update shape
-            if n[-1] == ":": #signals waveform change (signalling another melody polyphony to be added)
+            # When encountering label words, update shape.
+            if n[-1] == ":":
                 if n == "sine:":
                     shape = "s"
                 elif n == "square:":
                     shape = "q"
                 elif n == "triangle:":
                     shape = "t"
-                elif n == "sawtooth:":
+                elif n in {"saw:", "sawtooth:"}:
                     shape = "w"
                 continue
 
@@ -75,7 +75,7 @@ class Music:
         play_wav(filename=filename)
 
     def play_from_playsound(self, filename="m.wav", sample_rate=44100, bpm=100):
-        """ This method is used to play the music using playsound library after writing WAV.
+        """Play the music using playsound after writing WAV.
         """
         global ps
         if ps is None:
