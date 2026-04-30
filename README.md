@@ -71,6 +71,9 @@ four base waves:
 }
 ```
 
+See [docs/timbre.md](docs/timbre.md) for the current waveform-based timbre
+format, mix visualization, and future timbre ideas.
+
 JSON is the project format because it is explicit, easy to validate, and maps
 directly to the web UI. It is also a better target for AI-generated music:
 future prompt-based generation can ask a model for one JSON object with
@@ -262,31 +265,13 @@ Deployment guides:
 
 ## Roadmap
 
-Python TODO list:
+TODO list:
 
  - [ ] time different implementations main_cpp.py, main_list.py, main_np.py and compare with C++
  - [ ] write tests
  - [ ] add docs
- - [x] use C++ code as a backend
- - [x] add waveforms.py to store functions for each waveform
- - [x] add Entry with up/down for transpose
  - [ ] use () to pass frequecies or chords
- - [x] add bpm and sample rate selection
- - [ ] use numpy for faster performance
- - [ ] the functions can be added to produce complex timber and polyphony
- - [ ] add loudness: ff, f, fp, p, pp
+ - [ ] add loudness: [ff], [f], [fp], [p], [pp]
  - [ ] add dynamics: cresc, dim
  - [ ] add timber
- - [x] GUI (maybe try webapp next? Electrojs?)
- - [ ] add polyphony (fugue)
- - [x] live waveform plotting matplotlib like oscilloscope
- - [x] playsound on the go with Enter (plays the line just completed)
- - [ ] threading, running playsound at background (already okay with vlc open)
-
-C++ TODO list:
-
- - [x] consistent note length
- - [ ] functional REPL
- - [x] triangle wave generation
- - [x] polyphony doesn't sound out of tune anymore?
- - [x] saw and square waves sounds bad, add LPF to soften it
+ - [ ] functional REPL: modernize `uv run main.py cli` as terminal interactive score preview
