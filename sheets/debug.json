@@ -8,28 +8,28 @@
   "parts": [
     {
       "name": "part 1",
-      "waveform": "triangle",
+      "timbre": "triangle",
       "score": [
         "4a3 4a4 24r"
       ]
     },
     {
       "name": "part 2",
-      "waveform": "square",
+      "timbre": "square",
       "score": [
         "8r 4a3 4a4 16r"
       ]
     },
     {
       "name": "part 3",
-      "waveform": "sine",
+      "timbre": "sine",
       "score": [
         "16r 4a3 4a4 8r"
       ]
     },
     {
       "name": "part 4",
-      "waveform": "saw",
+      "timbre": "saw",
       "score": [
         "24r 4a3 4a4"
       ]

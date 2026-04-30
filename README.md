@@ -40,7 +40,7 @@ WaveMusic stores projects as JSON files in `sheets/`:
   "parts": [
     {
       "name": "lead",
-      "waveform": "square",
+      "timbre": "square",
       "score": ["2c4 g e f | 4g 4r"]
     }
   ]
@@ -51,14 +51,14 @@ The `score` field keeps the compact note syntax. The JSON wrapper stores
 project metadata and per-part settings. `transpose` is a whole-number semitone
 offset applied at render time.
 
-`waveform` can be a simple preset name such as `sine`, `square`, `triangle`,
+`timbre` can be a simple preset name such as `sine`, `square`, `triangle`,
 `saw`, `soft organ`, or `warm synth organ`. For custom timbre, use a mix of the
 four base waves:
 
 ```json
 {
   "name": "lead",
-  "waveform": {
+  "timbre": {
     "preset": "custom",
     "mix": {
       "sine": 0.4,
@@ -71,8 +71,9 @@ four base waves:
 }
 ```
 
-See [docs/timbre.md](docs/timbre.md) for the current waveform-based timbre
-format, mix visualization, and future timbre ideas.
+See [docs/timbre.md](docs/timbre.md) for the current mix-based timbre
+format, mix visualization, and future `partials`, `filter`, `noise`,
+`envelope`, and `vibrato` ideas.
 
 JSON is the project format because it is explicit, easy to validate, and maps
 directly to the web UI. It is also a better target for AI-generated music:
@@ -83,7 +84,7 @@ inside each `score` field.
 
 Before rendering, Python converts the JSON project into an internal `.score`
 stream for the C++ engine. The `.score` format contains only render data, such
-as waveform sections and notes; metadata like `title`, `key`, and
+as mix sections and notes; metadata like `title`, `key`, and
 `time_signature` stays in JSON unless it later affects sound generation. This
 keeps the C++ code focused on the heavy work: parsing a strict render stream,
 synthesizing audio, mixing parts, filtering, and writing WAV output. Because

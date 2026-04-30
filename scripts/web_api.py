@@ -25,14 +25,14 @@ from scripts.project import (
     DEFAULT_TIME_SIGNATURE,
     DEFAULT_TITLE,
     DEFAULT_TRANSPOSE,
-    DEFAULT_WAVEFORM,
+    DEFAULT_TIMBRE,
     MAX_TRANSPOSE,
     MIN_TRANSPOSE,
     PART_COUNT,
     clamp_int,
     compose_score,
     load_project,
-    normalize_waveform,
+    normalize_timbre,
     part_score_text,
 )
 from src.simple import main_pybind
@@ -228,7 +228,7 @@ def _render_score_to_file(
 
 class Part(BaseModel):
     name: str = Field(default="")
-    waveform: Any = Field(default=DEFAULT_WAVEFORM)
+    timbre: Any = Field(default=DEFAULT_TIMBRE)
     score: str = Field(default="")
 
 
@@ -249,7 +249,7 @@ class RenderRequest(BaseModel):
 
 
 class PreviewRequest(BaseModel):
-    waveform: Any = Field(default=DEFAULT_WAVEFORM)
+    timbre: Any = Field(default=DEFAULT_TIMBRE)
     line: str = Field(default="")
     sample_rate: int = Field(default=DEFAULT_SAMPLE_RATE)
     bpm: int = Field(default=DEFAULT_BPM)
@@ -350,7 +350,7 @@ def preview_line(payload: PreviewRequest):
         raise HTTPException(status_code=400, detail="Line is empty.")
     part = Part(
         name="preview",
-        waveform=normalize_waveform(payload.waveform),
+        timbre=normalize_timbre(payload.timbre),
         score=line,
     )
     score_text = compose_score([part])

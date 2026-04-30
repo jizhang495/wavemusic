@@ -224,16 +224,16 @@ body {
   margin-bottom: 0.45rem;
 }
 
-.wave-plots {
+.timbre-plots {
   display: grid;
   gap: 0.45rem;
 }
 
-.wave-plots figure {
+.timbre-plots figure {
   margin: 0;
 }
 
-.wave-plots canvas {
+.timbre-plots canvas {
   display: block;
   width: 100%;
   height: 68px;
@@ -242,7 +242,7 @@ body {
   background: #ffffff;
 }
 
-.wave-plots figcaption {
+.timbre-plots figcaption {
   margin-top: 0.15rem;
   color: #475569;
   font-size: 0.76rem;

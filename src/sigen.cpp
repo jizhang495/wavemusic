@@ -29,9 +29,9 @@ f_lut_t note_t::construct_lut() {
 }
 
 // TODO: remove octave from class and calculate frequency before construction?
-note_t::note_t(wave_t w, int l, std::string n, int o) {
+note_t::note_t(mix_t m, int l, std::string n, int o) {
     static f_lut_t f_lut = construct_lut();
-    wave   = w;
+    mix    = m;
     length = l;
     name   = n;
     octave = o;
@@ -83,15 +83,15 @@ float filter(int i, int s_len) {
 
 // write one note with note_t
 void play(std::vector<int16_t> &pcm_data, int &ptr, note_t note, bool first) {
-    play(pcm_data, ptr, note.wave, note.length, note.freq, first);
+    play(pcm_data, ptr, note.mix, note.length, note.freq, first);
 }
 
 // write one note with note parameters
 // signal generator -> attack/release gain filter -> output
-void play(std::vector<int16_t> &pcm_data, int &ptr, wave_t wave,
+void play(std::vector<int16_t> &pcm_data, int &ptr, mix_t mix,
           int length, float freq, bool first) {
 
-    float total_weight = wave.sine + wave.square + wave.triangle + wave.saw;
+    float total_weight = mix.sine + mix.square + mix.triangle + mix.saw;
     #ifdef DEBUG
     assert(length != 0);
     if (total_weight > 0.0f) { assert(freq != 0.0); }
@@ -109,10 +109,10 @@ void play(std::vector<int16_t> &pcm_data, int &ptr, wave_t wave,
     float saw_weight = 0.0;
 
     if (total_weight > 0.0f) {
-        sine_weight = wave.sine / total_weight;
-        square_weight = wave.square / total_weight;
-        triangle_weight = wave.triangle / total_weight;
-        saw_weight = wave.saw / total_weight;
+        sine_weight = mix.sine / total_weight;
+        square_weight = mix.square / total_weight;
+        triangle_weight = mix.triangle / total_weight;
+        saw_weight = mix.saw / total_weight;
     }
 
     #ifdef DEBUG
@@ -155,17 +155,17 @@ void play(std::vector<int16_t> &pcm_data, int &ptr, wave_t wave,
 }
 
 #ifdef DEBUG
-std::ostream &operator<<(std::ostream &os, wave_t wave) {
-    os << "wave("
-       << wave.sine << ','
-       << wave.square << ','
-       << wave.triangle << ','
-       << wave.saw << ')';
+std::ostream &operator<<(std::ostream &os, mix_t mix) {
+    os << "mix("
+       << mix.sine << ','
+       << mix.square << ','
+       << mix.triangle << ','
+       << mix.saw << ')';
     return os;
 }
 
 std::ostream &operator<<(std::ostream &os, note_t const &note) {
-    os << std::setw(28) << note.wave
+    os << std::setw(28) << note.mix
        << std::setw(3) << note.length << ' '
        << std::left << std::setw(2) << note.name << std::right
        << std::setw(7) << std::fixed << std::setprecision(1) << note.freq

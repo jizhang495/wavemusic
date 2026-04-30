@@ -6,8 +6,8 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-WAVE_ORDER = ("sine", "square", "triangle", "saw")
-WAVE_PRESETS = {
+MIX_ORDER = ("sine", "square", "triangle", "saw")
+TIMBRE_PRESETS = {
     "sine": {"sine": 1.0, "square": 0.0, "triangle": 0.0, "saw": 0.0},
     "square": {"sine": 0.0, "square": 1.0, "triangle": 0.0, "saw": 0.0},
     "triangle": {"sine": 0.0, "square": 0.0, "triangle": 1.0, "saw": 0.0},
@@ -20,7 +20,7 @@ WAVE_PRESETS = {
         "saw": 0.15,
     },
 }
-DEFAULT_WAVEFORM = "triangle"
+DEFAULT_TIMBRE = "triangle"
 DEFAULT_BPM = 100
 DEFAULT_SAMPLE_RATE = 44100
 DEFAULT_TRANSPOSE = 0
@@ -60,21 +60,21 @@ def clamp_float(value: Any, *, default: float, minimum: float, maximum: float) -
     return parsed
 
 
-def normalize_waveform_preset(value: Any) -> str:
-    preset = str(value or DEFAULT_WAVEFORM).strip().lower().replace("_", " ")
+def normalize_timbre_preset(value: Any) -> str:
+    preset = str(value or DEFAULT_TIMBRE).strip().lower().replace("_", " ")
     if preset == "sawtooth":
         return "saw"
-    if preset in WAVE_PRESETS or preset == "custom":
+    if preset in TIMBRE_PRESETS or preset == "custom":
         return preset
-    return DEFAULT_WAVEFORM
+    return DEFAULT_TIMBRE
 
 
-def normalize_wave_mix(
+def normalize_mix(
     value: Any,
     *,
     fallback: Mapping[str, float] | None = None,
 ) -> dict[str, float]:
-    fallback = fallback or WAVE_PRESETS[DEFAULT_WAVEFORM]
+    fallback = fallback or TIMBRE_PRESETS[DEFAULT_TIMBRE]
     if isinstance(value, Mapping):
         return {
             name: clamp_float(
@@ -83,7 +83,7 @@ def normalize_wave_mix(
                 minimum=0.0,
                 maximum=1.0,
             )
-            for name in WAVE_ORDER
+            for name in MIX_ORDER
         }
     if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
         return {
@@ -93,37 +93,37 @@ def normalize_wave_mix(
                 minimum=0.0,
                 maximum=1.0,
             )
-            for index, name in enumerate(WAVE_ORDER)
+            for index, name in enumerate(MIX_ORDER)
         }
     return dict(fallback)
 
 
-def normalize_waveform(waveform: Any) -> str | dict[str, Any]:
-    if isinstance(waveform, Mapping):
-        preset = normalize_waveform_preset(waveform.get("preset"))
+def normalize_timbre(timbre: Any) -> str | dict[str, Any]:
+    if isinstance(timbre, Mapping):
+        preset = normalize_timbre_preset(timbre.get("preset"))
         if preset == "custom":
             return {
                 "preset": "custom",
-                "mix": normalize_wave_mix(
-                    waveform.get("mix"),
-                    fallback=WAVE_PRESETS["warm synth organ"],
+                "mix": normalize_mix(
+                    timbre.get("mix"),
+                    fallback=TIMBRE_PRESETS["warm synth organ"],
                 ),
             }
         return preset
-    return normalize_waveform_preset(waveform)
+    return normalize_timbre_preset(timbre)
 
 
-def waveform_mix(waveform: Any) -> dict[str, float]:
-    normalized = normalize_waveform(waveform)
+def timbre_mix(timbre: Any) -> dict[str, float]:
+    normalized = normalize_timbre(timbre)
     if isinstance(normalized, Mapping):
-        return normalize_wave_mix(normalized.get("mix"))
-    return dict(WAVE_PRESETS.get(normalized, WAVE_PRESETS[DEFAULT_WAVEFORM]))
+        return normalize_mix(normalized.get("mix"))
+    return dict(TIMBRE_PRESETS.get(normalized, TIMBRE_PRESETS[DEFAULT_TIMBRE]))
 
 
-def waveform_header(waveform: Any) -> str:
-    mix = waveform_mix(waveform)
-    values = " ".join(f"{mix[name]:g}" for name in WAVE_ORDER)
-    return f"wave {values}:"
+def mix_header(timbre: Any) -> str:
+    mix = timbre_mix(timbre)
+    values = " ".join(f"{mix[name]:g}" for name in MIX_ORDER)
+    return f"mix {values}:"
 
 
 def score_lines(score: Any) -> list[str]:
@@ -176,7 +176,7 @@ def normalize_project(
         parts.append(
             {
                 "name": name,
-                "waveform": normalize_waveform(raw_part.get("waveform")),
+                "timbre": normalize_timbre(raw_part.get("timbre")),
                 "score": score_text(raw_part.get("score", "")),
             }
         )
@@ -229,10 +229,10 @@ def compose_score(parts: Sequence[Any]) -> str:
 
     blocks = []
     for part in normalized_parts:
-        waveform = waveform_header(_field(part, "waveform"))
+        mix = mix_header(_field(part, "timbre"))
         part_text = part_score_text(part)
         if part_text:
-            blocks.append(f"{waveform}\n{part_text}")
+            blocks.append(f"{mix}\n{part_text}")
         else:
-            blocks.append(waveform)
+            blocks.append(mix)
     return "\n\n".join(blocks)

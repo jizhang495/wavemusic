@@ -1,28 +1,28 @@
 import "./styles.css";
 
-type WavePreset = "sine" | "square" | "triangle" | "saw" | "soft organ" | "warm synth organ" | "custom";
+type TimbrePreset = "sine" | "square" | "triangle" | "saw" | "soft organ" | "warm synth organ" | "custom";
 
-type WaveMix = {
+type MixWeights = {
   sine: number;
   square: number;
   triangle: number;
   saw: number;
 };
 
-type Waveform = WavePreset | {
+type Timbre = TimbrePreset | {
   preset: "custom";
-  mix: WaveMix;
+  mix: MixWeights;
 };
 
 interface PartPayload {
   name: string;
-  waveform: Waveform;
+  timbre: Timbre;
   score: string;
 }
 
 interface ProjectPartPayload {
   name?: string;
-  waveform?: unknown;
+  timbre?: unknown;
   score?: string | string[];
 }
 
@@ -49,7 +49,7 @@ interface RenderRequest {
 }
 
 interface PreviewRequest {
-  waveform: Waveform;
+  timbre: Timbre;
   line: string;
   sample_rate: number;
   bpm: number;
@@ -76,16 +76,16 @@ interface ScorePayload {
 
 type ElementRef = {
   name: HTMLInputElement;
-  waveform: HTMLSelectElement;
+  timbre: HTMLSelectElement;
   mixPanel: HTMLElement;
-  mixInputs: Record<keyof WaveMix, HTMLInputElement>;
+  mixInputs: Record<keyof MixWeights, HTMLInputElement>;
   mixText: HTMLInputElement;
-  waveCanvas: HTMLCanvasElement;
+  timbreCanvas: HTMLCanvasElement;
   spectrumCanvas: HTMLCanvasElement;
   score: HTMLTextAreaElement;
 };
 
-const wavePresets: WavePreset[] = [
+const timbrePresets: TimbrePreset[] = [
   "sine",
   "square",
   "triangle",
@@ -94,8 +94,8 @@ const wavePresets: WavePreset[] = [
   "warm synth organ",
   "custom",
 ];
-const waveKeys: Array<keyof WaveMix> = ["sine", "square", "triangle", "saw"];
-const presetMixes: Record<WavePreset, WaveMix> = {
+const mixKeys: Array<keyof MixWeights> = ["sine", "square", "triangle", "saw"];
+const presetMixes: Record<TimbrePreset, MixWeights> = {
   sine: { sine: 1, square: 0, triangle: 0, saw: 0 },
   square: { sine: 0, square: 1, triangle: 0, saw: 0 },
   triangle: { sine: 0, square: 0, triangle: 1, saw: 0 },
@@ -242,7 +242,7 @@ function clampTranspose(value: number): number {
 function partPayloads(): PartPayload[] {
   return partRefs.map((ref, index) => ({
     name: ref.name.value.trim() || `part ${index + 1}`,
-    waveform: waveformPayload(ref),
+    timbre: timbrePayload(ref),
     score: ref.score.value.trim(),
   }));
 }
@@ -274,7 +274,7 @@ function buildProject(): MusicProject {
     transpose: clampTranspose(Number(transposeElement.value)),
     parts: partRefs.map((ref, index) => ({
       name: ref.name.value.trim() || `part ${index + 1}`,
-      waveform: waveformPayload(ref),
+      timbre: timbrePayload(ref),
       score: scoreLines(ref.score.value),
     })),
   };
@@ -326,7 +326,7 @@ function clampUnit(value: number): number {
   return value;
 }
 
-function normalizePreset(value: unknown): WavePreset {
+function normalizePreset(value: unknown): TimbrePreset {
   const normalized = String(value || "triangle")
     .trim()
     .toLowerCase()
@@ -334,13 +334,13 @@ function normalizePreset(value: unknown): WavePreset {
   if (normalized === "sawtooth") {
     return "saw";
   }
-  if (wavePresets.includes(normalized as WavePreset)) {
-    return normalized as WavePreset;
+  if (timbrePresets.includes(normalized as TimbrePreset)) {
+    return normalized as TimbrePreset;
   }
   return "triangle";
 }
 
-function normalizeMix(value: unknown, fallback: WaveMix): WaveMix {
+function normalizeMix(value: unknown, fallback: MixWeights): MixWeights {
   if (isRecord(value)) {
     return {
       sine: clampUnit(Number(value.sine ?? fallback.sine)),
@@ -360,7 +360,7 @@ function normalizeMix(value: unknown, fallback: WaveMix): WaveMix {
   return { ...fallback };
 }
 
-function waveformState(value: unknown): { preset: WavePreset; mix: WaveMix } {
+function timbreState(value: unknown): { preset: TimbrePreset; mix: MixWeights } {
   if (isRecord(value)) {
     const preset = normalizePreset(value.preset);
     const fallback = preset === "custom" ? presetMixes.custom : presetMixes[preset];
@@ -373,7 +373,7 @@ function waveformState(value: unknown): { preset: WavePreset; mix: WaveMix } {
   return { preset, mix: { ...presetMixes[preset] } };
 }
 
-function mixFromInputs(ref: ElementRef): WaveMix {
+function mixFromInputs(ref: ElementRef): MixWeights {
   return {
     sine: clampUnit(Number(ref.mixInputs.sine.value)),
     square: clampUnit(Number(ref.mixInputs.square.value)),
@@ -382,16 +382,16 @@ function mixFromInputs(ref: ElementRef): WaveMix {
   };
 }
 
-function waveformPayload(ref: ElementRef): Waveform {
-  const preset = normalizePreset(ref.waveform.value);
+function timbrePayload(ref: ElementRef): Timbre {
+  const preset = normalizePreset(ref.timbre.value);
   if (preset === "custom") {
     return { preset: "custom", mix: mixFromInputs(ref) };
   }
   return preset;
 }
 
-function mixedWaveSample(phase: number, mix: WaveMix): number {
-  const total = waveKeys.reduce((sum, key) => sum + mix[key], 0);
+function mixedWaveSample(phase: number, mix: MixWeights): number {
+  const total = mixKeys.reduce((sum, key) => sum + mix[key], 0);
   if (total <= 0) return 0;
 
   const sine = Math.sin(2 * Math.PI * phase);
@@ -421,7 +421,7 @@ function resizeCanvas(canvas: HTMLCanvasElement) {
   return { ctx, width, height };
 }
 
-function drawWaveform(canvas: HTMLCanvasElement, mix: WaveMix) {
+function drawTimbre(canvas: HTMLCanvasElement, mix: MixWeights) {
   const resized = resizeCanvas(canvas);
   if (!resized) return;
   const { ctx, width, height } = resized;
@@ -450,7 +450,7 @@ function drawWaveform(canvas: HTMLCanvasElement, mix: WaveMix) {
   ctx.stroke();
 }
 
-function spectrumValues(mix: WaveMix): number[] {
+function spectrumValues(mix: MixWeights): number[] {
   const sampleCount = 256;
   const harmonicCount = 16;
   const values: number[] = [];
@@ -472,7 +472,7 @@ function spectrumValues(mix: WaveMix): number[] {
   return values.map((value) => value / max);
 }
 
-function drawSpectrum(canvas: HTMLCanvasElement, mix: WaveMix) {
+function drawSpectrum(canvas: HTMLCanvasElement, mix: MixWeights) {
   const resized = resizeCanvas(canvas);
   if (!resized) return;
   const { ctx, width, height } = resized;
@@ -497,21 +497,21 @@ function drawSpectrum(canvas: HTMLCanvasElement, mix: WaveMix) {
   });
 }
 
-function updateWaveVisuals(ref: ElementRef) {
+function updateTimbreVisuals(ref: ElementRef) {
   const mix = mixFromInputs(ref);
-  ref.mixText.value = waveKeys.map((key) => mix[key]).join(", ");
-  drawWaveform(ref.waveCanvas, mix);
+  ref.mixText.value = mixKeys.map((key) => mix[key]).join(", ");
+  drawTimbre(ref.timbreCanvas, mix);
   drawSpectrum(ref.spectrumCanvas, mix);
 }
 
-function setCustomMix(ref: ElementRef, mix: WaveMix) {
-  waveKeys.forEach((key) => {
+function setCustomMix(ref: ElementRef, mix: MixWeights) {
+  mixKeys.forEach((key) => {
     ref.mixInputs[key].value = String(mix[key]);
   });
-  updateWaveVisuals(ref);
+  updateTimbreVisuals(ref);
 }
 
-function parseCustomMixText(value: string, fallback: WaveMix): WaveMix {
+function parseCustomMixText(value: string, fallback: MixWeights): MixWeights {
   const parts = value.split(/[,\s]+/).filter(Boolean);
   return normalizeMix(parts.map((part) => Number(part)), fallback);
 }
@@ -549,9 +549,9 @@ function normalizeProject(
       typeof rawPart.name === "string" && rawPart.name.trim()
         ? rawPart.name.trim()
         : `part ${index + 1}`;
-    const { preset, mix } = waveformState(rawPart.waveform);
-    const waveform: Waveform = preset === "custom" ? { preset, mix } : preset;
-    parts.push({ name, waveform, score: scoreText(rawPart.score) });
+    const { preset, mix } = timbreState(rawPart.timbre);
+    const timbre: Timbre = preset === "custom" ? { preset, mix } : preset;
+    parts.push({ name, timbre, score: scoreText(rawPart.score) });
   }
 
   return {
@@ -577,15 +577,15 @@ function applyProject(project: Omit<ScorePayload, "filename">) {
   while (normalized.length < partRefs.length) {
     normalized.push({
       name: `part ${normalized.length + 1}`,
-      waveform: "triangle",
+      timbre: "triangle",
       score: "",
     });
   }
   normalized.slice(0, partRefs.length).forEach((part, index) => {
     const ref = partRefs[index];
-    const { preset, mix } = waveformState(part.waveform);
+    const { preset, mix } = timbreState(part.timbre);
     ref.name.value = part.name || `part ${index + 1}`;
-    ref.waveform.value = preset;
+    ref.timbre.value = preset;
     setCustomMix(ref, mix);
     ref.score.value = part.score || "";
   });
@@ -760,7 +760,7 @@ async function playSelectedLine() {
     return;
   }
   const payload: PreviewRequest = {
-    waveform: waveformPayload(partRefs[index]),
+    timbre: timbrePayload(partRefs[index]),
     line,
     sample_rate: clampSampleRate(Number(sampleRateElement.value)),
     bpm: clampBpm(Number(bpmElement.value)),
@@ -790,20 +790,20 @@ function renderPartInputs() {
     name.value = `part ${i + 1}`;
     name.ariaLabel = `Part ${i + 1} name`;
 
-    const waveform = document.createElement("select");
-    wavePresets.forEach((value) => {
+    const timbre = document.createElement("select");
+    timbrePresets.forEach((value) => {
       const option = document.createElement("option");
       option.value = value;
       option.textContent = value;
       if (value === "triangle") option.selected = true;
-      waveform.appendChild(option);
+      timbre.appendChild(option);
     });
 
     const mixPanel = document.createElement("div");
     mixPanel.className = "custom-mix";
 
-    const mixInputs = {} as Record<keyof WaveMix, HTMLInputElement>;
-    waveKeys.forEach((key) => {
+    const mixInputs = {} as Record<keyof MixWeights, HTMLInputElement>;
+    mixKeys.forEach((key) => {
       const label = document.createElement("label");
       label.className = "mix-slider";
       const text = document.createElement("span");
@@ -816,7 +816,7 @@ function renderPartInputs() {
       input.value = String(presetMixes.triangle[key]);
       input.addEventListener("input", () => {
         const ref = partRefs[i];
-        ref.waveform.value = "custom";
+        ref.timbre.value = "custom";
         setCustomMix(ref, mixFromInputs(ref));
       });
       label.appendChild(text);
@@ -827,11 +827,11 @@ function renderPartInputs() {
 
     const mixText = document.createElement("input");
     mixText.className = "mix-values";
-    mixText.value = waveKeys.map((key) => presetMixes.triangle[key]).join(", ");
+    mixText.value = mixKeys.map((key) => presetMixes.triangle[key]).join(", ");
     mixText.placeholder = "sine, square, triangle, saw";
     mixText.addEventListener("change", () => {
       const ref = partRefs[i];
-      ref.waveform.value = "custom";
+      ref.timbre.value = "custom";
       setCustomMix(
         ref,
         parseCustomMixText(mixText.value, mixFromInputs(ref)),
@@ -846,14 +846,14 @@ function renderPartInputs() {
     mixDetails.appendChild(mixText);
 
     const plotGrid = document.createElement("div");
-    plotGrid.className = "wave-plots";
+    plotGrid.className = "timbre-plots";
 
     const wavePlot = document.createElement("figure");
-    const waveCanvas = document.createElement("canvas");
-    waveCanvas.ariaLabel = "waveform over one period";
+    const timbreCanvas = document.createElement("canvas");
+    timbreCanvas.ariaLabel = "timbre over one period";
     const waveCaption = document.createElement("figcaption");
     waveCaption.textContent = "wave";
-    wavePlot.appendChild(waveCanvas);
+    wavePlot.appendChild(timbreCanvas);
     wavePlot.appendChild(waveCaption);
 
     const spectrumPlot = document.createElement("figure");
@@ -869,14 +869,14 @@ function renderPartInputs() {
     mixDetails.appendChild(plotGrid);
     mixDetails.addEventListener("toggle", () => {
       if (mixDetails.open) {
-        updateWaveVisuals(partRefs[i]);
+        updateTimbreVisuals(partRefs[i]);
       }
     });
     mixPanel.appendChild(mixDetails);
 
-    waveform.addEventListener("change", () => {
+    timbre.addEventListener("change", () => {
       const ref = partRefs[i];
-      const preset = normalizePreset(waveform.value);
+      const preset = normalizePreset(timbre.value);
       if (preset !== "custom") {
         setCustomMix(ref, presetMixes[preset]);
       }
@@ -906,7 +906,7 @@ function renderPartInputs() {
     });
 
     header.appendChild(name);
-    header.appendChild(waveform);
+    header.appendChild(timbre);
 
     section.appendChild(header);
     section.appendChild(mixPanel);
@@ -915,11 +915,11 @@ function renderPartInputs() {
 
     partRefs.push({
       name,
-      waveform,
+      timbre,
       mixPanel,
       mixInputs,
       mixText,
-      waveCanvas,
+      timbreCanvas,
       spectrumCanvas,
       score: textarea,
     });
@@ -931,7 +931,7 @@ function renderPartInputs() {
 renderPartInputs();
 
 window.addEventListener("resize", () => {
-  partRefs.forEach(updateWaveVisuals);
+  partRefs.forEach(updateTimbreVisuals);
 });
 
 const resizeHandle = document.createElement("div");

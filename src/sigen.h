@@ -28,7 +28,7 @@ extern uint32_t g_sample_rate;
 extern uint32_t g_bpm;
 extern int32_t g_transpose;
 
-struct wave_t {
+struct mix_t {
     float sine;
     float square;
     float triangle;
@@ -43,17 +43,17 @@ private:
     static f_lut_t construct_lut();
 
 public:
-    wave_t       wave;
+    mix_t        mix;
     int          length;
     std::string  name;
     int          octave;
     float        freq;
 
-    note_t(wave_t w, int l, std::string n, int o);
+    note_t(mix_t m, int l, std::string n, int o);
 };
 
 #ifdef DEBUG
-std::ostream &operator<<(std::ostream &os, wave_t wave);
+std::ostream &operator<<(std::ostream &os, mix_t mix);
 std::ostream &operator<<(std::ostream &os, note_t const &note);
 std::ostream &operator<<(std::ostream &os, std::vector<note_t> const &stave);
 std::ostream &operator<<(std::ostream &os, std::vector<std::vector<note_t>> const &score);
@@ -62,7 +62,7 @@ std::ostream &operator<<(std::ostream &os, std::vector<std::vector<note_t>> cons
 std::vector<int16_t> lowpass(std::vector<int16_t> &pcm_data);
 float filter(int i, int s_len);
 void play(std::vector<int16_t> &pcm_data, int &ptr, note_t note, bool first);
-void play(std::vector<int16_t> &pcm_data, int &ptr, wave_t wave, int length,
+void play(std::vector<int16_t> &pcm_data, int &ptr, mix_t mix, int length,
           float freq, bool first);
 
 #endif

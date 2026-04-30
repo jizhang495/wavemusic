@@ -8,7 +8,7 @@
   "parts": [
     {
       "name": "lead",
-      "waveform": "square",
+      "timbre": "square",
       "score": [
         "4b4 2c+5 2e 4f+ g+ | 16g+",
         "4b4 2c+5 2e 4f+ g+ | 6g+ 2f+ 4f+ 2b4 2b",
@@ -19,7 +19,7 @@
     },
     {
       "name": "harmony",
-      "waveform": "triangle",
+      "timbre": "triangle",
       "score": [
         "4b3 4e4 4f+ 4g+ | 4b c+5 e f+",
         "4e5 2r 2c+5 4b4 4g+ | 4e c+ b3 a",
@@ -30,7 +30,7 @@
     },
     {
       "name": "bass",
-      "waveform": "sine",
+      "timbre": "sine",
       "score": [
         "8e3 8b | c+4 g+3",
         "8a3 8g+ | f+ b",
@@ -41,7 +41,7 @@
     },
     {
       "name": "part 4",
-      "waveform": "triangle",
+      "timbre": "triangle",
       "score": []
     }
   ]

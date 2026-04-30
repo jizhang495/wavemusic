@@ -1,11 +1,11 @@
-wave 0 0 1 0:
+mix 0 0 1 0:
 2c4 d e f | 2g a b c5
 
-wave 1 0 0 0:
+mix 1 0 0 0:
 2c4 d e f | 2g a b c5
 
-wave 0 1 0 0:
+mix 0 1 0 0:
 2c4 d e f | 2g a b c5
 
-wave 0 0 0 1:
+mix 0 0 0 1:
 2c4 d e f | 2g a b c5

@@ -1,15 +1,15 @@
 # Timbre JSON Format
 
-WaveMusic currently stores each part's tone color in the `waveform` JSON field.
+WaveMusic currently stores each part's tone color in the `timbre` JSON field.
 This is a simple timbre format based on mixing four base waveforms. Future
-versions may add a richer `timbre` field for partials, filtering, envelopes,
-noise, and vibrato.
+versions may add richer fields under `timbre` for partials, filtering,
+envelopes, noise, and vibrato.
 
-The current `waveform` field is the user-facing version of what the C++ engine
+The current `timbre` field is the user-facing version of what the C++ engine
 receives as a `.score` header:
 
 ```text
-wave <sine> <square> <triangle> <saw>:
+mix <sine> <square> <triangle> <saw>:
 ```
 
 The JSON format is easier for users, the UI, and AI generation. Python
@@ -22,7 +22,7 @@ The simplest form is a preset string:
 ```json
 {
   "name": "lead",
-  "waveform": "triangle",
+  "timbre": "triangle",
   "score": ["2c4 d e f | 4g r"]
 }
 ```
@@ -41,7 +41,7 @@ For custom mixes, use an object:
 ```json
 {
   "name": "lead",
-  "waveform": {
+  "timbre": {
     "preset": "custom",
     "mix": {
       "sine": 0.4,
@@ -63,11 +63,11 @@ sine square triangle saw
 So the JSON example above becomes:
 
 ```text
-wave 0.4 0.15 0.3 0.15:
+mix 0.4 0.15 0.3 0.15:
 ```
 
 The C++ engine normalizes the four weights by their sum before synthesis. That
-means `wave 1 1 1 1:` changes tone color without making output four times
+means `mix 1 1 1 1:` changes tone color without making output four times
 louder. A mix of all zeros is silence.
 
 ## What The Four Waves Do
@@ -151,19 +151,23 @@ The bars are normalized so the largest visible harmonic has full height. The
 plot shows relative color, not absolute loudness, and it is not an analysis of
 the rendered WAV file.
 
-## Future Timbre Format
+## Future Timbre Fields
 
-A richer future format could add a `timbre` object. This is not implemented
-yet, but this shape would be much more expressive than mixing four fixed waves:
+A richer future `timbre` object can keep `preset`, then use either `mix` or
+`partials` as the tone source. `filter`, `noise`, `envelope`, and `vibrato`
+would be optional shaping layers on top. Today, WaveMusic renders `preset` and
+`mix`; the other fields are planned.
 
 ```json
 {
   "name": "lead",
   "timbre": {
-    "type": "additive",
+    "preset": "custom",
     "partials": [1.0, 0.45, 0.3, 0.18, 0.12, 0.08, 0.05],
     "noise": 0.02,
-    "lowpass": 4500,
+    "filter": {
+      "lowpass": 4500
+    },
     "envelope": {
       "attack_ms": 35,
       "decay_ms": 80,
@@ -180,15 +184,21 @@ yet, but this shape would be much more expressive than mixing four fixed waves:
 
 Possible meanings:
 
-- `type`: synthesis method. `additive` means building tone from harmonic
-  partials.
+- `preset`: named starting point. `custom` means the part supplies its own
+  source settings.
+- `mix`: current implemented source: weighted sine, square, triangle, and saw.
 - `partials`: harmonic amplitudes. The first value is the fundamental, the
-  second is harmonic 2, and so on.
+  second is harmonic 2, and so on. This would be additive synthesis.
+- `filter`: tonal shaping after the source is generated.
+- `filter.lowpass`: high-frequency cutoff in Hz. Lower values sound warmer and
+  less harsh.
 - `noise`: small non-pitched component for breath, bow, or attack texture.
-- `lowpass`: high-frequency cutoff in Hz. Lower values sound warmer and less
-  harsh.
 - `envelope`: attack, decay, sustain, and release shape.
 - `vibrato`: periodic pitch movement. `depth: 0` means no vibrato.
+
+`mix` and `partials` should be mutually exclusive in one `timbre` object. If
+both are present, the importer should either reject the object or choose a
+documented priority.
 
 ## What Makes A Tone Good For The Ear
 
@@ -210,8 +220,7 @@ notes more expressive, but it is not required for a pleasant organ-like sound.
 A baroque violin-like tone needs more than a static waveform, but a useful
 minimum could be:
 
-- `type: "additive"` with many harmonic partials, because bowed strings are
-  harmonically rich.
+- many harmonic `partials`, because bowed strings are harmonically rich.
 - moderate `lowpass`, roughly in the `3000..6000` Hz range, to avoid a harsh
   synthetic edge.
 - small `noise`, around `0.01..0.04`, to suggest bow contact.

@@ -23,8 +23,21 @@ class Music:
         length = 2  # default length
         octave = 4  # default octave
 
-        for n in notelist:
+        i = 0
+        while i < len(notelist):
+            n = notelist[i]
             n = n.strip()
+            if n == "mix" and i + 4 < len(notelist):
+                weights = []
+                for token in notelist[i + 1 : i + 5]:
+                    try:
+                        weights.append(float(token.rstrip(":")))
+                    except ValueError:
+                        weights.append(0)
+                shape = ["s", "q", "t", "w"][weights.index(max(weights))]
+                i += 5
+                continue
+
             # When encountering label words, update shape.
             if n[-1] == ":":
                 if n == "sine:":
@@ -35,6 +48,7 @@ class Music:
                     shape = "t"
                 elif n in {"saw:", "sawtooth:"}:
                     shape = "w"
+                i += 1
                 continue
 
             # update shape, length and octave if they are present in the note
@@ -55,6 +69,7 @@ class Music:
             note_obj = Note(shape=shape, length=length, octave=octave)
             note_obj.update(n)  # update the note name and frequency
             self.notes.append(note_obj)
+            i += 1
 
     def write_wav(
         self,

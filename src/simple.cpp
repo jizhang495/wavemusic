@@ -35,25 +35,25 @@ typedef struct Wav_Header {
 
 typedef std::vector<std::vector<note_t>> score_t;
 
-wave_t make_wave(float sine, float square, float triangle, float saw) {
+mix_t make_mix(float sine, float square, float triangle, float saw) {
     return {sine, square, triangle, saw};
 }
 
-wave_t preset_wave(const std::string &name) {
+mix_t preset_mix(const std::string &name) {
     if (name == "sine") {
-        return make_wave(1.0f, 0.0f, 0.0f, 0.0f);
+        return make_mix(1.0f, 0.0f, 0.0f, 0.0f);
     } else if (name == "square") {
-        return make_wave(0.0f, 1.0f, 0.0f, 0.0f);
+        return make_mix(0.0f, 1.0f, 0.0f, 0.0f);
     } else if (name == "triangle") {
-        return make_wave(0.0f, 0.0f, 1.0f, 0.0f);
+        return make_mix(0.0f, 0.0f, 1.0f, 0.0f);
     } else if (name == "saw" || name == "sawtooth") {
-        return make_wave(0.0f, 0.0f, 0.0f, 1.0f);
+        return make_mix(0.0f, 0.0f, 0.0f, 1.0f);
     }
-    return make_wave(0.0f, 0.0f, 1.0f, 0.0f);
+    return make_mix(0.0f, 0.0f, 1.0f, 0.0f);
 }
 
-wave_t rest_wave() {
-    return make_wave(0.0f, 0.0f, 0.0f, 0.0f);
+mix_t rest_mix() {
+    return make_mix(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 std::string lower_token(std::string token) {
@@ -71,7 +71,7 @@ bool strip_trailing_colon(std::string &token) {
     return false;
 }
 
-float parse_wave_weight(std::string token) {
+float parse_mix_weight(std::string token) {
     strip_trailing_colon(token);
     char *end = nullptr;
     float value = std::strtof(token.c_str(), &end);
@@ -116,7 +116,7 @@ score_t parse(std::string str_in) {
         }
     }
 
-    wave_t w = rest_wave();
+    mix_t m = rest_mix();
     int l = 0;
     std::string n;
     int o = 4;
@@ -125,12 +125,12 @@ score_t parse(std::string str_in) {
         std::string token = tokens[i];
         std::string header = lower_token(token);
         // instrument headers
-        if (header == "wave" && i + 4 < tokens.size()) {
-            w = make_wave(
-                parse_wave_weight(tokens[i + 1]),
-                parse_wave_weight(tokens[i + 2]),
-                parse_wave_weight(tokens[i + 3]),
-                parse_wave_weight(tokens[i + 4])
+        if (header == "mix" && i + 4 < tokens.size()) {
+            m = make_mix(
+                parse_mix_weight(tokens[i + 1]),
+                parse_mix_weight(tokens[i + 2]),
+                parse_mix_weight(tokens[i + 3]),
+                parse_mix_weight(tokens[i + 4])
             );
             push_stave_if_needed(score, stave);
             i += 4;
@@ -139,7 +139,7 @@ score_t parse(std::string str_in) {
             if (header == "sine" || header == "square" ||
                 header == "triangle" || header == "saw" ||
                 header == "sawtooth") {
-                w = preset_wave(header);
+                m = preset_mix(header);
                 push_stave_if_needed(score, stave);
             }
         // notes
@@ -157,9 +157,9 @@ score_t parse(std::string str_in) {
 
                 // rests
                 if (n == "R") {
-                    stave.push_back({rest_wave(), l, n, o});
+                    stave.push_back({rest_mix(), l, n, o});
                 } else {
-                    stave.push_back({w, l, n, o});
+                    stave.push_back({m, l, n, o});
                 }
             }
         }

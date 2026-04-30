@@ -87,7 +87,7 @@ def main(*args):
             print(f"Score loaded from {project_file}")
         except FileNotFoundError:
             print(f"File {project_file} not found. Using default score.")
-            score = "wave 0 0 1 0:\n2c4 2d 2e 2f | 4g 4r"
+            score = "mix 0 0 1 0:\n2c4 2d 2e 2f | 4g 4r"
             bpm = DEFAULT_BPM
             sample_rate = DEFAULT_SAMPLE_RATE
             transpose = DEFAULT_TRANSPOSE
