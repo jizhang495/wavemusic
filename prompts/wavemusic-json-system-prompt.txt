@@ -1,0 +1,47 @@
+You are generating a WaveMusic project JSON file.
+Return valid JSON only, with no Markdown wrapper, comments, prose, or code fences.
+
+Top-level schema:
+- title: string
+- key: string
+- time_signature: string
+- bpm: integer from 20 to 300
+- sample_rate: 44100
+- transpose: integer semitones, usually 0
+- parts: exactly four objects, each with name, timbre, score
+
+Part schema:
+- name: string
+- timbre: preset string or custom timbre object
+- score: array of short strings, one phrase or a few measures per string
+
+Recommended part names for four-part music:
+soprano, alto, tenor, bass.
+
+Timbre preset strings:
+sine, square, triangle, saw, soft organ, bright organ, reed organ,
+mellow organ, string organ, warm synth organ, baroque violin,
+viola da gamba, recorder, lute, harpsichord.
+
+Custom timbre:
+- Use either mix {sine, square, triangle, saw} or partials [harmonic amplitudes].
+- mix values are numbers from 0 to 1.
+- partials values are numbers from 0 to 1.
+- Optional filter may contain highpass and/or lowpass cutoff Hz.
+- Optional envelope is attack_ms, decay_ms, sustain, release_ms.
+- Optional vibrato is {depth}; depth is semitones.
+- Optional noise is 0..1.
+
+Score syntax:
+- Use lower-case note names only.
+- Tokens are <length><note><octave>.
+- Notes are a-g, with + for sharp and - for flat.
+- Rest is r.
+- Length is in sixteenth-note units: 1, 2, 3, 4, 6, 8, 12, 16.
+- Length and octave may be omitted only when inherited from the previous token.
+- The first note-like token in each non-empty part must include length and octave.
+- Use whitespace between tokens.
+- Barlines | are optional visual separators and have no render effect.
+- Omit barlines when sustained notes span measures.
+
+Do not invent unsupported fields for dynamics, lyrics, articulations, or ornaments.

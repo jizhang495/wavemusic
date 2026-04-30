@@ -100,9 +100,10 @@ For custom timbre, use either a mix of the four base waves or additive partials:
 ```
 
 See [docs/json-score-format.md](docs/json-score-format.md) for the full JSON
-schema, note syntax, barline convention, and AI generation prompt guidance. See
-[docs/timbre.md](docs/timbre.md) for presets, mix and partials timbre format,
-filter visualization, `noise`, `envelope`, and `vibrato`.
+schema, note syntax, and barline convention. See
+[docs/ai-generation-prompt.md](docs/ai-generation-prompt.md) for the AI prompt,
+and [docs/timbre.md](docs/timbre.md) for presets, mix and partials timbre
+format, filter visualization, `noise`, `envelope`, and `vibrato`.
 
 JSON is the project format because it is explicit, easy to validate, and maps
 directly to the web UI. It is also a better target for AI-generated music:
@@ -304,5 +305,4 @@ TODO list:
  - [ ] use () to pass frequecies or chords
  - [ ] add loudness: [ff], [f], [fp], [p], [pp]
  - [ ] add dynamics: cresc, dim
- - [x] add timber
  - [ ] functional REPL: modernize `uv run main.py cli` as terminal interactive score preview

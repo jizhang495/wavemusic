@@ -1,4 +1,5 @@
 import "./styles.css";
+import aiSystemPrompt from "../../prompts/wavemusic-json-system-prompt.txt?raw";
 
 type TimbrePreset =
   | "sine"
@@ -300,7 +301,7 @@ container.innerHTML = `
   <header class="app-header">
     <div>
       <h1 class="title">WaveMusic</h1>
-      <p class="subtitle">Create scores and render WAV audio.</p>
+      <p class="subtitle">Create scores with abc's, and render WAV audio.</p>
     </div>
     <a class="github-link" href="https://github.com/jizhang495/wavemusic" target="_blank" rel="noreferrer">GitHub</a>
   </header>
@@ -318,6 +319,13 @@ container.innerHTML = `
       <span>Status</span>
       <span id="status" class="status">Idle</span>
     </div>
+  </section>
+  <section class="toolbar ai-row">
+    <label class="ai-prompt-field">
+      <span>Generate with AI</span>
+      <input id="ai-prompt" placeholder="Describe your music" />
+    </label>
+    <button id="copy-ai-prompt" type="button">Copy prompt</button>
   </section>
   <section class="toolbar settings-row">
     <label>
@@ -368,6 +376,8 @@ const audioPlayer = app.querySelector<HTMLAudioElement>("#audio-player")!;
 const loadButton = app.querySelector<HTMLButtonElement>("#load-sheet")!;
 const localScoreButton = app.querySelector<HTMLButtonElement>("#load-local-score")!;
 const localScoreFileInput = app.querySelector<HTMLInputElement>("#local-score-file")!;
+const aiPromptElement = app.querySelector<HTMLInputElement>("#ai-prompt")!;
+const copyAiPromptButton = app.querySelector<HTMLButtonElement>("#copy-ai-prompt")!;
 const previewButton = app.querySelector<HTMLButtonElement>("#preview-line")!;
 const saveButton = app.querySelector<HTMLButtonElement>("#save-sheet")!;
 const saveWavButton = app.querySelector<HTMLButtonElement>("#save-wav")!;
@@ -475,6 +485,49 @@ function downloadBlob(blob: Blob, filename: string) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function buildAiPrompt(): string {
+  const userInput = aiPromptElement.value.trim()
+    || "Write a short four-part piece.";
+  return [
+    "Generate a JSON file for a four-part WaveMusic music piece.",
+    "Follow the schema and system prompt exactly.",
+    "",
+    "<system prompt>",
+    aiSystemPrompt.trim(),
+    "</system prompt>",
+    "",
+    "<user input>",
+    userInput,
+    "</user input>",
+  ].join("\n");
+}
+
+async function copyTextToClipboard(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  if (!copied) {
+    throw new Error("Clipboard copy failed.");
+  }
+}
+
+async function copyAiPrompt() {
+  await copyTextToClipboard(buildAiPrompt());
+  setStatus("Copied AI generation prompt.");
 }
 
 function audioUrlWithCache(audioUrl: string): string {
@@ -1764,6 +1817,10 @@ localScoreButton.addEventListener("click", () => {
 
 localScoreFileInput.addEventListener("change", () => {
   loadLocalScore().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+});
+
+copyAiPromptButton.addEventListener("click", () => {
+  copyAiPrompt().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
 });
 
 previewButton.addEventListener("click", () => {

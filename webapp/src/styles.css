@@ -72,6 +72,10 @@ body {
   grid-template-columns: minmax(220px, 1fr) minmax(160px, 180px) minmax(150px, 170px) minmax(180px, 1fr);
 }
 
+.ai-row {
+  grid-template-columns: minmax(260px, 1fr) minmax(120px, 150px);
+}
+
 .settings-row {
   grid-template-columns: minmax(135px, 170px) minmax(90px, 110px) minmax(105px, 125px) minmax(75px, 85px) minmax(110px, 125px) minmax(80px, 95px) minmax(95px, 115px) minmax(90px, 110px);
 }

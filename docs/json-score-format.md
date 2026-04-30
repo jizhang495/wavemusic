@@ -218,63 +218,10 @@ text.
 
 ## Good JSON For AI Generation
 
-When asking an AI model to generate a WaveMusic score, give it these rules:
-
-- Return valid JSON only, with no Markdown wrapper.
-- Include `title`, `key`, `time_signature`, `bpm`, `sample_rate`, `transpose`,
-  and `parts`.
-- Generate exactly four parts unless asked otherwise.
-- Each part must have `name`, `timbre`, and `score`.
-- Make `score` an array of short strings, one phrase or a few measures per
-  string.
-- Use only the note syntax documented above.
-- Use lower-case note names.
-- Use `+` for sharps and `-` for flats.
-- Use `r` for rests.
-- Start each non-empty part with a token that has both length and octave.
-- Barlines are optional. Omit them when notes span measures.
-- Do not invent unsupported fields for dynamics, lyrics, articulations, or
-  ornaments unless the code has added support for them.
-- For custom timbre, use either `mix` or `partials`, not both.
-- If using filters, prefer `lowpass` higher than `highpass`; WaveMusic ignores
-  an invalid lowpass value during normalization.
-
-Prompt template:
-
-```text
-Create a WaveMusic JSON score. Return valid JSON only.
-
-Schema:
-- title: string
-- key: string
-- time_signature: string
-- bpm: integer from 20 to 300
-- sample_rate: 44100
-- transpose: integer semitones, usually 0
-- parts: exactly four objects, each with name, timbre, score
-
-Timbre presets:
-sine, square, triangle, saw, soft organ, bright organ, reed organ,
-mellow organ, string organ, warm synth organ, baroque violin,
-viola da gamba, recorder, lute, harpsichord.
-
-Custom timbre:
-- Use either mix {sine, square, triangle, saw} or partials [harmonic amplitudes].
-- Optional filter may contain highpass and/or lowpass cutoff Hz.
-- Optional envelope is attack_ms, decay_ms, sustain, release_ms.
-- Optional vibrato is {depth}; depth is semitones.
-- Optional noise is 0..1.
-
-Score syntax:
-Tokens are <length><note><octave>. Length is in sixteenth-note units.
-Notes are a-g, with + for sharp and - for flat. Rest is r.
-Length and octave may be omitted only when inherited from the previous token.
-The first token in each part must include length and octave.
-Barlines | are optional visual separators. Omit barlines when sustained notes
-span measures.
-
-Write a short four-part piece in <style/key/mood>.
-```
+Use [ai-generation-prompt.md](ai-generation-prompt.md) or the web UI's
+"Copy prompt" button. The canonical prompt text lives in
+[../prompts/wavemusic-json-system-prompt.txt](../prompts/wavemusic-json-system-prompt.txt),
+so AI generation rules have one source of truth.
 
 ## Validation Checklist
 
