@@ -298,7 +298,7 @@ Deployment guides:
 
 TODO list:
 
- - [ ] time different implementations main_cpp.py, main_list.py, main_np.py and compare with C++
+ - [ ] time different implementations python vs c++. Additive partials take much more time to compute. Use wavetable/cache?
  - [ ] write tests
  - [ ] add docs
  - [ ] use () to pass frequecies or chords

@@ -350,7 +350,7 @@ container.innerHTML = `
   <section class="parts" id="parts"></section>
   <section class="playback-bar">
     <button id="preview-line" type="button">Preview selected (Alt+Enter)</button>
-    <button id="render" type="button">Render WAV</button>
+    <button id="render" type="button">Render WAV (Ctrl/Cmd+Enter)</button>
     <audio id="audio-player" controls></audio>
   </section>
 `;
@@ -1153,7 +1153,7 @@ function applyProject(project: Omit<ScorePayload, "filename">) {
     const state = timbreState(part.timbre);
     ref.name.value = part.name || `part ${index + 1}`;
     setTimbreControls(ref, state);
-    setMixDetailsOpen(ref, state.preset === "custom" || state.source === "partials");
+    setMixDetailsOpen(ref, state.preset === "custom");
     ref.score.value = part.score || "";
   });
 }
@@ -1342,6 +1342,10 @@ async function playSelectedLine() {
 
 function previewSelectedLine() {
   playSelectedLine().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+}
+
+function renderWavWithStatus() {
+  renderWav().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
 }
 
 function renderPartInputs() {
@@ -1648,12 +1652,13 @@ function renderPartInputs() {
     timbre.addEventListener("change", () => {
       const ref = partRefs[i];
       const preset = normalizePreset(timbre.value);
+      const wasOpen = ref.mixDetails.open;
       if (preset === "custom") {
         setMixDetailsOpen(ref, true);
       } else {
         const state = presetState(preset);
         setTimbreControls(ref, state);
-        setMixDetailsOpen(ref, state.source === "partials");
+        setMixDetailsOpen(ref, wasOpen);
       }
     });
 
@@ -1773,8 +1778,19 @@ saveWavButton.addEventListener("click", () => {
   saveWav().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
 });
 
-renderButton.addEventListener("click", () => {
-  renderWav().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+renderButton.addEventListener("click", renderWavWithStatus);
+
+document.addEventListener("keydown", (event) => {
+  if (
+    event.key === "Enter"
+    && (event.ctrlKey || event.metaKey)
+    && !event.altKey
+    && !event.shiftKey
+    && !event.repeat
+  ) {
+    event.preventDefault();
+    renderWavWithStatus();
+  }
 });
 
 refreshSheets().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
