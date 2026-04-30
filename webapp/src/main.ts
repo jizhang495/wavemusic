@@ -11,6 +11,11 @@ type TimbrePreset =
   | "mellow organ"
   | "string organ"
   | "warm synth organ"
+  | "baroque violin"
+  | "viola da gamba"
+  | "recorder"
+  | "lute"
+  | "harpsichord"
   | "custom";
 
 type MixWeights = {
@@ -32,6 +37,16 @@ type EnvelopeSettings = {
   decay_ms: number;
   sustain: number;
   release_ms: number;
+};
+
+type PresetTimbre = {
+  source?: TimbreSource;
+  mix?: MixWeights;
+  partials?: number[];
+  filter?: FilterSettings;
+  envelope?: EnvelopeSettings;
+  noise?: number;
+  vibratoDepth?: number;
 };
 
 type TimbreObject = {
@@ -143,6 +158,11 @@ const timbrePresets: TimbrePreset[] = [
   "mellow organ",
   "string organ",
   "warm synth organ",
+  "baroque violin",
+  "viola da gamba",
+  "recorder",
+  "lute",
+  "harpsichord",
   "custom",
 ];
 const mixKeys: Array<keyof MixWeights> = ["sine", "square", "triangle", "saw"];
@@ -154,18 +174,99 @@ const defaultEnvelope: EnvelopeSettings = {
   release_ms: 20,
 };
 const referencePlotFrequency = 440;
+const defaultMix: MixWeights = { sine: 0.4, square: 0.15, triangle: 0.3, saw: 0.15 };
+const presetTimbres: Record<TimbrePreset, PresetTimbre> = {
+  sine: { mix: { sine: 1, square: 0, triangle: 0, saw: 0 } },
+  square: { mix: { sine: 0, square: 1, triangle: 0, saw: 0 } },
+  triangle: { mix: { sine: 0, square: 0, triangle: 1, saw: 0 } },
+  saw: { mix: { sine: 0, square: 0, triangle: 0, saw: 1 } },
+  "soft organ": {
+    mix: { sine: 0.55, square: 0.1, triangle: 0.35, saw: 0 },
+    filter: { lowpass: 5200 },
+    envelope: { attack_ms: 18, decay_ms: 0, sustain: 1, release_ms: 90 },
+  },
+  "bright organ": {
+    mix: { sine: 0.3, square: 0.2, triangle: 0.2, saw: 0.3 },
+    filter: { highpass: 60, lowpass: 7800 },
+    envelope: { attack_ms: 12, decay_ms: 0, sustain: 1, release_ms: 70 },
+  },
+  "reed organ": {
+    mix: { sine: 0.2, square: 0.45, triangle: 0.1, saw: 0.25 },
+    filter: { highpass: 120, lowpass: 6200 },
+    envelope: { attack_ms: 25, decay_ms: 0, sustain: 1, release_ms: 100 },
+    noise: 0.01,
+  },
+  "mellow organ": {
+    mix: { sine: 0.7, square: 0.05, triangle: 0.25, saw: 0 },
+    filter: { lowpass: 4200 },
+    envelope: { attack_ms: 25, decay_ms: 0, sustain: 1, release_ms: 120 },
+  },
+  "string organ": {
+    mix: { sine: 0.25, square: 0.05, triangle: 0.3, saw: 0.4 },
+    filter: { highpass: 100, lowpass: 5000 },
+    envelope: { attack_ms: 35, decay_ms: 0, sustain: 0.95, release_ms: 160 },
+    noise: 0.005,
+  },
+  "warm synth organ": {
+    mix: { sine: 0.4, square: 0.15, triangle: 0.3, saw: 0.15 },
+    filter: { lowpass: 6000 },
+    envelope: { attack_ms: 22, decay_ms: 0, sustain: 0.98, release_ms: 120 },
+    vibratoDepth: 0.03,
+  },
+  "baroque violin": {
+    source: "partials",
+    partials: [1, 0.56, 0.38, 0.28, 0.2, 0.15, 0.11, 0.08, 0.06, 0.045, 0.035, 0.025],
+    filter: { highpass: 120, lowpass: 4500 },
+    envelope: { attack_ms: 35, decay_ms: 70, sustain: 0.88, release_ms: 140 },
+    noise: 0.025,
+  },
+  "viola da gamba": {
+    source: "partials",
+    partials: [1, 0.48, 0.32, 0.22, 0.16, 0.11, 0.08, 0.055],
+    filter: { highpass: 80, lowpass: 3800 },
+    envelope: { attack_ms: 45, decay_ms: 90, sustain: 0.82, release_ms: 180 },
+    noise: 0.018,
+  },
+  recorder: {
+    source: "partials",
+    partials: [1, 0.22, 0.08, 0.04, 0.02, 0.012],
+    filter: { highpass: 200, lowpass: 6500 },
+    envelope: { attack_ms: 18, decay_ms: 40, sustain: 0.96, release_ms: 90 },
+    noise: 0.015,
+  },
+  lute: {
+    source: "partials",
+    partials: [1, 0.55, 0.38, 0.24, 0.16, 0.1, 0.065, 0.04],
+    filter: { highpass: 90, lowpass: 5000 },
+    envelope: { attack_ms: 4, decay_ms: 160, sustain: 0.25, release_ms: 90 },
+    noise: 0.006,
+  },
+  harpsichord: {
+    source: "partials",
+    partials: [1, 0.7, 0.55, 0.42, 0.3, 0.22, 0.15, 0.1, 0.07, 0.05],
+    filter: { highpass: 80, lowpass: 7500 },
+    envelope: { attack_ms: 2, decay_ms: 220, sustain: 0.18, release_ms: 80 },
+    noise: 0.004,
+  },
+  custom: { mix: defaultMix },
+};
 const presetMixes: Record<TimbrePreset, MixWeights> = {
-  sine: { sine: 1, square: 0, triangle: 0, saw: 0 },
-  square: { sine: 0, square: 1, triangle: 0, saw: 0 },
-  triangle: { sine: 0, square: 0, triangle: 1, saw: 0 },
-  saw: { sine: 0, square: 0, triangle: 0, saw: 1 },
-  "soft organ": { sine: 0.55, square: 0.1, triangle: 0.35, saw: 0 },
-  "bright organ": { sine: 0.3, square: 0.2, triangle: 0.2, saw: 0.3 },
-  "reed organ": { sine: 0.2, square: 0.45, triangle: 0.1, saw: 0.25 },
-  "mellow organ": { sine: 0.7, square: 0.05, triangle: 0.25, saw: 0 },
-  "string organ": { sine: 0.25, square: 0.05, triangle: 0.3, saw: 0.4 },
-  "warm synth organ": { sine: 0.4, square: 0.15, triangle: 0.3, saw: 0.15 },
-  custom: { sine: 0.4, square: 0.15, triangle: 0.3, saw: 0.15 },
+  sine: presetTimbres.sine.mix ?? defaultMix,
+  square: presetTimbres.square.mix ?? defaultMix,
+  triangle: presetTimbres.triangle.mix ?? defaultMix,
+  saw: presetTimbres.saw.mix ?? defaultMix,
+  "soft organ": presetTimbres["soft organ"].mix ?? defaultMix,
+  "bright organ": presetTimbres["bright organ"].mix ?? defaultMix,
+  "reed organ": presetTimbres["reed organ"].mix ?? defaultMix,
+  "mellow organ": presetTimbres["mellow organ"].mix ?? defaultMix,
+  "string organ": presetTimbres["string organ"].mix ?? defaultMix,
+  "warm synth organ": presetTimbres["warm synth organ"].mix ?? defaultMix,
+  "baroque violin": presetTimbres["baroque violin"].mix ?? defaultMix,
+  "viola da gamba": presetTimbres["viola da gamba"].mix ?? defaultMix,
+  recorder: presetTimbres.recorder.mix ?? defaultMix,
+  lute: presetTimbres.lute.mix ?? defaultMix,
+  harpsichord: presetTimbres.harpsichord.mix ?? defaultMix,
+  custom: presetTimbres.custom.mix ?? defaultMix,
 };
 const configuredApiRoot = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 const apiRoots = (() => {
@@ -497,38 +598,53 @@ type TimbreUiState = {
   noise: number;
 };
 
+function presetState(preset: TimbrePreset): TimbreUiState {
+  const config = presetTimbres[preset] ?? presetTimbres.triangle;
+  const source = config.source ?? (config.partials ? "partials" : "mix");
+  return {
+    preset,
+    source,
+    mix: { ...(config.mix ?? defaultMix) },
+    partials: [...(config.partials ?? defaultPartials)],
+    filter: { ...(config.filter ?? {}) },
+    advanced: Boolean(config.envelope || config.noise || config.vibratoDepth),
+    envelope: { ...defaultEnvelope, ...(config.envelope ?? {}) },
+    vibratoDepth: config.vibratoDepth ?? 0,
+    noise: config.noise ?? 0,
+  };
+}
+
 function timbreState(value: unknown): TimbreUiState {
   if (isRecord(value)) {
     const preset = normalizePreset(value.preset);
-    const fallback = preset === "custom" ? presetMixes.custom : presetMixes[preset];
-    const source = "partials" in value ? "partials" : "mix";
-    const noise = clampUnit(Number(value.noise ?? 0));
-    const envelope = normalizeEnvelope(value.envelope);
-    const vibratoDepth = normalizeVibrato(value.vibrato);
+    const base = presetState(preset);
+    const source = "partials" in value
+      ? "partials"
+      : "mix" in value
+        ? "mix"
+        : base.source;
+    const hasAdvanced =
+      "envelope" in value || "vibrato" in value || "noise" in value;
     return {
       preset,
       source,
-      mix: normalizeMix(value.mix, fallback),
+      mix: normalizeMix(value.mix, base.mix),
       partials: normalizePartials(value.partials),
-      filter: normalizeFilter(value.filter),
-      advanced: "envelope" in value || "vibrato" in value || "noise" in value,
-      envelope,
-      vibratoDepth,
-      noise,
+      filter: "filter" in value ? normalizeFilter(value.filter) : { ...base.filter },
+      advanced: hasAdvanced || base.advanced,
+      envelope: "envelope" in value
+        ? normalizeEnvelope(value.envelope)
+        : { ...base.envelope },
+      vibratoDepth: "vibrato" in value
+        ? normalizeVibrato(value.vibrato)
+        : base.vibratoDepth,
+      noise: "noise" in value
+        ? clampUnit(Number(value.noise ?? 0))
+        : base.noise,
     };
   }
   const preset = normalizePreset(value);
-  return {
-    preset,
-    source: "mix",
-    mix: { ...presetMixes[preset] },
-    partials: [...defaultPartials],
-    filter: {},
-    advanced: false,
-    envelope: { ...defaultEnvelope },
-    vibratoDepth: 0,
-    noise: 0,
-  };
+  return presetState(preset);
 }
 
 function mixFromInputs(ref: ElementRef): MixWeights {
@@ -571,8 +687,66 @@ function timbreSource(ref: ElementRef): TimbreSource {
   return ref.sourceInputs.partials.checked ? "partials" : "mix";
 }
 
+function nearlyEqual(left: number | undefined, right: number | undefined): boolean {
+  return Math.abs((left ?? 0) - (right ?? 0)) < 0.000001;
+}
+
+function mixesEqual(left: MixWeights, right: MixWeights): boolean {
+  return mixKeys.every((key) => nearlyEqual(left[key], right[key]));
+}
+
+function partialsEqual(left: number[], right: number[]): boolean {
+  return left.length === right.length
+    && left.every((value, index) => nearlyEqual(value, right[index]));
+}
+
+function filtersEqual(left: FilterSettings, right: FilterSettings): boolean {
+  return nearlyEqual(left.highpass, right.highpass)
+    && nearlyEqual(left.lowpass, right.lowpass);
+}
+
+function envelopesEqual(left: EnvelopeSettings, right: EnvelopeSettings): boolean {
+  return nearlyEqual(left.attack_ms, right.attack_ms)
+    && nearlyEqual(left.decay_ms, right.decay_ms)
+    && nearlyEqual(left.sustain, right.sustain)
+    && nearlyEqual(left.release_ms, right.release_ms);
+}
+
+function timbreMatchesPreset(state: TimbreUiState, preset: TimbrePreset): boolean {
+  if (preset === "custom") return false;
+  const base = presetState(preset);
+  const sourceMatches = state.source === "partials"
+    ? partialsEqual(state.partials, base.partials)
+    : mixesEqual(state.mix, base.mix);
+  return state.source === base.source
+    && sourceMatches
+    && filtersEqual(state.filter, base.filter)
+    && state.advanced === base.advanced
+    && envelopesEqual(state.envelope, base.envelope)
+    && nearlyEqual(state.vibratoDepth, base.vibratoDepth)
+    && nearlyEqual(state.noise, base.noise);
+}
+
+function timbreControlsMatchPreset(ref: ElementRef, preset: TimbrePreset): boolean {
+  return timbreMatchesPreset({
+    preset,
+    source: timbreSource(ref),
+    mix: mixFromInputs(ref),
+    partials: partialsFromInput(ref),
+    filter: filterFromInputs(ref),
+    advanced: ref.advancedEnabled.checked,
+    envelope: envelopeFromInputs(ref),
+    vibratoDepth: clampPositive(Number(ref.vibratoValue.value), 2),
+    noise: clampUnit(Number(ref.noiseValue.value)),
+  }, preset);
+}
+
 function timbrePayload(ref: ElementRef): Timbre {
   const preset = normalizePreset(ref.timbre.value);
+  if (timbreControlsMatchPreset(ref, preset)) {
+    return preset;
+  }
+
   const source = timbreSource(ref);
   const filter = filterFromInputs(ref);
   const hasFilter = filter.highpass !== undefined || filter.lowpass !== undefined;
@@ -604,6 +778,10 @@ function timbrePayload(ref: ElementRef): Timbre {
 }
 
 function timbrePayloadFromState(state: TimbreUiState): Timbre {
+  if (timbreMatchesPreset(state, state.preset)) {
+    return state.preset;
+  }
+
   const hasFilter = state.filter.highpass !== undefined || state.filter.lowpass !== undefined;
   const timbre: TimbreObject = { preset: state.preset };
   if (state.source === "partials") {
@@ -891,6 +1069,11 @@ function setMixDetailsOpen(ref: ElementRef, open: boolean) {
   if (open) {
     requestAnimationFrame(() => updateTimbreVisuals(ref));
   }
+}
+
+function markTimbreCustom(ref: ElementRef) {
+  ref.timbre.value = "custom";
+  setMixDetailsOpen(ref, true);
 }
 
 function parseCustomMixText(value: string, fallback: MixWeights): MixWeights {
@@ -1228,7 +1411,7 @@ function renderPartInputs() {
       input.value = String(presetMixes.triangle[key]);
       input.addEventListener("input", () => {
         const ref = partRefs[i];
-        ref.timbre.value = "custom";
+        markTimbreCustom(ref);
         ref.sourceInputs.mix.checked = true;
         setCustomMix(ref, mixFromInputs(ref));
         syncSourceControls(ref);
@@ -1242,7 +1425,7 @@ function renderPartInputs() {
 
     mixText.addEventListener("change", () => {
       const ref = partRefs[i];
-      ref.timbre.value = "custom";
+      markTimbreCustom(ref);
       ref.sourceInputs.mix.checked = true;
       setCustomMix(
         ref,
@@ -1272,16 +1455,14 @@ function renderPartInputs() {
     [mixRadio, partialsRadio].forEach((radio) => {
       radio.addEventListener("change", () => {
         const ref = partRefs[i];
-        if (ref.sourceInputs.partials.checked) {
-          ref.timbre.value = "custom";
-        }
+        markTimbreCustom(ref);
         syncSourceControls(ref);
       });
     });
 
     partialsText.addEventListener("change", () => {
       const ref = partRefs[i];
-      ref.timbre.value = "custom";
+      markTimbreCustom(ref);
       ref.sourceInputs.partials.checked = true;
       setPartials(ref, parsePartialsText(partialsText.value));
       syncSourceControls(ref);
@@ -1325,21 +1506,27 @@ function renderPartInputs() {
 
     highpassReset.addEventListener("click", () => {
       const ref = partRefs[i];
+      markTimbreCustom(ref);
       ref.highpassValue.value = "0";
       syncFilterControls(ref);
     });
     lowpassReset.addEventListener("click", () => {
       const ref = partRefs[i];
+      markTimbreCustom(ref);
       ref.lowpassValue.value = "";
       syncFilterControls(ref);
     });
 
     [highpassValue, lowpassValue].forEach((input) => {
       input.addEventListener("input", () => {
-        syncFilterControls(partRefs[i]);
+        const ref = partRefs[i];
+        markTimbreCustom(ref);
+        syncFilterControls(ref);
       });
       input.addEventListener("change", () => {
-        syncFilterControls(partRefs[i]);
+        const ref = partRefs[i];
+        markTimbreCustom(ref);
+        syncFilterControls(ref);
       });
     });
 
@@ -1434,7 +1621,20 @@ function renderPartInputs() {
     });
 
     advancedEnabled.addEventListener("change", () => {
-      syncAdvancedControls(partRefs[i]);
+      const ref = partRefs[i];
+      markTimbreCustom(ref);
+      syncAdvancedControls(ref);
+    });
+    [
+      attackValue,
+      decayValue,
+      sustainValue,
+      releaseValue,
+      vibratoValue,
+      noiseValue,
+    ].forEach((input) => {
+      input.addEventListener("input", () => markTimbreCustom(partRefs[i]));
+      input.addEventListener("change", () => markTimbreCustom(partRefs[i]));
     });
     mixDetails.appendChild(advancedPanel);
 
@@ -1451,9 +1651,9 @@ function renderPartInputs() {
       if (preset === "custom") {
         setMixDetailsOpen(ref, true);
       } else {
-        ref.sourceInputs.mix.checked = true;
-        setCustomMix(ref, presetMixes[preset]);
-        syncSourceControls(ref);
+        const state = presetState(preset);
+        setTimbreControls(ref, state);
+        setMixDetailsOpen(ref, state.source === "partials");
       }
     });
 

@@ -32,6 +32,135 @@ TIMBRE_PRESETS = {
         "saw": 0.15,
     },
 }
+TIMBRE_PARTIAL_PRESETS = {
+    "baroque violin": (
+        1.0,
+        0.56,
+        0.38,
+        0.28,
+        0.20,
+        0.15,
+        0.11,
+        0.08,
+        0.06,
+        0.045,
+        0.035,
+        0.025,
+    ),
+    "viola da gamba": (1.0, 0.48, 0.32, 0.22, 0.16, 0.11, 0.08, 0.055),
+    "recorder": (1.0, 0.22, 0.08, 0.04, 0.02, 0.012),
+    "lute": (1.0, 0.55, 0.38, 0.24, 0.16, 0.10, 0.065, 0.04),
+    "harpsichord": (1.0, 0.70, 0.55, 0.42, 0.30, 0.22, 0.15, 0.10, 0.07, 0.05),
+}
+TIMBRE_PRESET_OPTIONS: dict[str, dict[str, Any]] = {
+    "soft organ": {
+        "filter": {"lowpass": 5200.0},
+        "envelope": {
+            "attack_ms": 18.0,
+            "decay_ms": 0.0,
+            "sustain": 1.0,
+            "release_ms": 90.0,
+        },
+    },
+    "bright organ": {
+        "filter": {"highpass": 60.0, "lowpass": 7800.0},
+        "envelope": {
+            "attack_ms": 12.0,
+            "decay_ms": 0.0,
+            "sustain": 1.0,
+            "release_ms": 70.0,
+        },
+    },
+    "reed organ": {
+        "filter": {"highpass": 120.0, "lowpass": 6200.0},
+        "noise": 0.01,
+        "envelope": {
+            "attack_ms": 25.0,
+            "decay_ms": 0.0,
+            "sustain": 1.0,
+            "release_ms": 100.0,
+        },
+    },
+    "mellow organ": {
+        "filter": {"lowpass": 4200.0},
+        "envelope": {
+            "attack_ms": 25.0,
+            "decay_ms": 0.0,
+            "sustain": 1.0,
+            "release_ms": 120.0,
+        },
+    },
+    "string organ": {
+        "filter": {"highpass": 100.0, "lowpass": 5000.0},
+        "noise": 0.005,
+        "envelope": {
+            "attack_ms": 35.0,
+            "decay_ms": 0.0,
+            "sustain": 0.95,
+            "release_ms": 160.0,
+        },
+    },
+    "warm synth organ": {
+        "filter": {"lowpass": 6000.0},
+        "envelope": {
+            "attack_ms": 22.0,
+            "decay_ms": 0.0,
+            "sustain": 0.98,
+            "release_ms": 120.0,
+        },
+        "vibrato": {"depth": 0.03},
+    },
+    "baroque violin": {
+        "filter": {"highpass": 120.0, "lowpass": 4500.0},
+        "noise": 0.025,
+        "envelope": {
+            "attack_ms": 35.0,
+            "decay_ms": 70.0,
+            "sustain": 0.88,
+            "release_ms": 140.0,
+        },
+    },
+    "viola da gamba": {
+        "filter": {"highpass": 80.0, "lowpass": 3800.0},
+        "noise": 0.018,
+        "envelope": {
+            "attack_ms": 45.0,
+            "decay_ms": 90.0,
+            "sustain": 0.82,
+            "release_ms": 180.0,
+        },
+    },
+    "recorder": {
+        "filter": {"highpass": 200.0, "lowpass": 6500.0},
+        "noise": 0.015,
+        "envelope": {
+            "attack_ms": 18.0,
+            "decay_ms": 40.0,
+            "sustain": 0.96,
+            "release_ms": 90.0,
+        },
+    },
+    "lute": {
+        "filter": {"highpass": 90.0, "lowpass": 5000.0},
+        "noise": 0.006,
+        "envelope": {
+            "attack_ms": 4.0,
+            "decay_ms": 160.0,
+            "sustain": 0.25,
+            "release_ms": 90.0,
+        },
+    },
+    "harpsichord": {
+        "filter": {"highpass": 80.0, "lowpass": 7500.0},
+        "noise": 0.004,
+        "envelope": {
+            "attack_ms": 2.0,
+            "decay_ms": 220.0,
+            "sustain": 0.18,
+            "release_ms": 80.0,
+        },
+    },
+}
 DEFAULT_TIMBRE = "triangle"
 DEFAULT_BPM = 100
 DEFAULT_SAMPLE_RATE = 44100
@@ -76,9 +205,40 @@ def normalize_timbre_preset(value: Any) -> str:
     preset = str(value or DEFAULT_TIMBRE).strip().lower().replace("_", " ")
     if preset == "sawtooth":
         return "saw"
-    if preset in TIMBRE_PRESETS or preset == "custom":
+    if (
+        preset in TIMBRE_PRESETS
+        or preset in TIMBRE_PARTIAL_PRESETS
+        or preset == "custom"
+    ):
         return preset
     return DEFAULT_TIMBRE
+
+
+def preset_timbre(preset: str) -> dict[str, Any]:
+    normalized = normalize_timbre_preset(preset)
+    if normalized == "custom":
+        return {
+            "preset": "custom",
+            "mix": dict(TIMBRE_PRESETS["warm synth organ"]),
+        }
+
+    result: dict[str, Any] = {"preset": normalized}
+    if normalized in TIMBRE_PARTIAL_PRESETS:
+        result["partials"] = list(TIMBRE_PARTIAL_PRESETS[normalized])
+    else:
+        result["mix"] = dict(
+            TIMBRE_PRESETS.get(normalized, TIMBRE_PRESETS[DEFAULT_TIMBRE])
+        )
+    options = TIMBRE_PRESET_OPTIONS.get(normalized, {})
+    if "filter" in options:
+        result["filter"] = dict(options["filter"])
+    if "noise" in options:
+        result["noise"] = options["noise"]
+    if "envelope" in options:
+        result["envelope"] = dict(options["envelope"])
+    if "vibrato" in options:
+        result["vibrato"] = dict(options["vibrato"])
+    return result
 
 
 def normalize_mix(
@@ -210,10 +370,11 @@ def normalize_timbre(timbre: Any) -> str | dict[str, Any]:
         if "partials" in timbre:
             result["partials"] = normalize_partials(timbre.get("partials"))
         elif preset == "custom" or "mix" in timbre:
+            preset_source = preset_timbre(preset)
             fallback = (
                 TIMBRE_PRESETS["warm synth organ"]
                 if preset == "custom"
-                else TIMBRE_PRESETS[preset]
+                else preset_source.get("mix", TIMBRE_PRESETS["warm synth organ"])
             )
             result["mix"] = normalize_mix(timbre.get("mix"), fallback=fallback)
 
@@ -248,13 +409,15 @@ def timbre_mix(timbre: Any) -> dict[str, float]:
     normalized = normalize_timbre(timbre)
     if isinstance(normalized, Mapping):
         preset = normalize_timbre_preset(normalized.get("preset"))
+        preset_source = preset_timbre(preset)
         fallback = (
             TIMBRE_PRESETS["warm synth organ"]
             if preset == "custom"
-            else TIMBRE_PRESETS[preset]
+            else preset_source.get("mix", TIMBRE_PRESETS["warm synth organ"])
         )
         return normalize_mix(normalized.get("mix"), fallback=fallback)
-    return dict(TIMBRE_PRESETS.get(normalized, TIMBRE_PRESETS[DEFAULT_TIMBRE]))
+    preset_source = preset_timbre(normalized)
+    return dict(preset_source.get("mix", TIMBRE_PRESETS[DEFAULT_TIMBRE]))
 
 
 def _append_timbre_options(parts: list[str], timbre: Mapping[str, Any]) -> None:
@@ -286,19 +449,39 @@ def _append_timbre_options(parts: list[str], timbre: Mapping[str, Any]) -> None:
 def timbre_header(timbre: Any) -> str:
     normalized = normalize_timbre(timbre)
     if isinstance(normalized, Mapping):
+        preset = normalize_timbre_preset(normalized.get("preset"))
+        options_source = (
+            preset_timbre(preset)
+            if preset != "custom"
+            else {"preset": "custom"}
+        )
+        for key in ("filter", "noise", "envelope", "vibrato"):
+            if key in normalized:
+                options_source[key] = normalized[key]
+
         if "partials" in normalized:
             parts = ["partials"]
             parts.extend(f"{value:g}" for value in normalized["partials"])
+        elif "mix" not in normalized and "partials" in options_source:
+            parts = ["partials"]
+            parts.extend(f"{value:g}" for value in options_source["partials"])
         else:
             mix = timbre_mix(normalized)
             parts = ["mix"]
             parts.extend(f"{mix[name]:g}" for name in MIX_ORDER)
-        _append_timbre_options(parts, normalized)
+        _append_timbre_options(parts, options_source)
         return f"{' '.join(parts)}:"
 
-    mix = TIMBRE_PRESETS.get(normalized, TIMBRE_PRESETS[DEFAULT_TIMBRE])
-    values = " ".join(f"{mix[name]:g}" for name in MIX_ORDER)
-    return f"mix {values}:"
+    preset = preset_timbre(normalized)
+    if "partials" in preset:
+        parts = ["partials"]
+        parts.extend(f"{value:g}" for value in preset["partials"])
+    else:
+        mix = preset["mix"]
+        parts = ["mix"]
+        parts.extend(f"{mix[name]:g}" for name in MIX_ORDER)
+    _append_timbre_options(parts, preset)
+    return f"{' '.join(parts)}:"
 
 
 def mix_header(timbre: Any) -> str:

@@ -67,6 +67,11 @@ Use one of the implemented preset strings:
 - `mellow organ`
 - `string organ`
 - `warm synth organ`
+- `baroque violin`
+- `viola da gamba`
+- `recorder`
+- `lute`
+- `harpsichord`
 
 For a four-part organ-style texture, a useful default is:
 
@@ -119,6 +124,12 @@ For additive synthesis, use `partials` instead of `mix`:
 `mix` and `partials` are mutually exclusive. `filter`, `noise`, `envelope`, and
 `vibrato` are optional. Omit `highpass` or `lowpass` when that filter is not
 used; do not use fake cutoff values like `lowpass: 0`.
+
+Preset strings are allowed to be richer than a raw mix. For example,
+`"soft organ"` is saved as a compact string, but the renderer expands it into a
+mix plus gentle lowpass filtering and envelope values. If a user edits those
+controls in the UI, the part becomes `custom` and the JSON saves the explicit
+fields.
 
 ## Score Syntax
 
@@ -225,7 +236,8 @@ When asking an AI model to generate a WaveMusic score, give it these rules:
 - Do not invent unsupported fields for dynamics, lyrics, articulations, or
   ornaments unless the code has added support for them.
 - For custom timbre, use either `mix` or `partials`, not both.
-- If using filters, make `lowpass` higher than `highpass`.
+- If using filters, prefer `lowpass` higher than `highpass`; WaveMusic ignores
+  an invalid lowpass value during normalization.
 
 Prompt template:
 
@@ -243,7 +255,8 @@ Schema:
 
 Timbre presets:
 sine, square, triangle, saw, soft organ, bright organ, reed organ,
-mellow organ, string organ, warm synth organ.
+mellow organ, string organ, warm synth organ, baroque violin,
+viola da gamba, recorder, lute, harpsichord.
 
 Custom timbre:
 - Use either mix {sine, square, triangle, saw} or partials [harmonic amplitudes].

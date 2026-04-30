@@ -53,8 +53,10 @@ offset applied at render time.
 
 `timbre` can be a simple preset name such as `sine`, `square`, `triangle`,
 `saw`, `soft organ`, `bright organ`, `reed organ`, `mellow organ`,
-`string organ`, or `warm synth organ`. For custom timbre, use either a mix of
-the four base waves or additive partials:
+`string organ`, `warm synth organ`, `baroque violin`, `viola da gamba`,
+`recorder`, `lute`, or `harpsichord`. Some presets expand to a full render
+recipe with partials, filters, and note shaping, while the JSON stays compact.
+For custom timbre, use either a mix of the four base waves or additive partials:
 
 ```json
 {
@@ -99,9 +101,8 @@ the four base waves or additive partials:
 
 See [docs/json-score-format.md](docs/json-score-format.md) for the full JSON
 schema, note syntax, barline convention, and AI generation prompt guidance. See
-[docs/timbre.md](docs/timbre.md) for the current mix-based timbre format, mix
-and partials timbre format, filter visualization, `noise`, `envelope`, and
-`vibrato`.
+[docs/timbre.md](docs/timbre.md) for presets, mix and partials timbre format,
+filter visualization, `noise`, `envelope`, and `vibrato`.
 
 JSON is the project format because it is explicit, easy to validate, and maps
 directly to the web UI. It is also a better target for AI-generated music:
@@ -303,5 +304,5 @@ TODO list:
  - [ ] use () to pass frequecies or chords
  - [ ] add loudness: [ff], [f], [fp], [p], [pp]
  - [ ] add dynamics: cresc, dim
- - [ ] add timber
+ - [x] add timber
  - [ ] functional REPL: modernize `uv run main.py cli` as terminal interactive score preview

@@ -115,11 +115,12 @@ tokens in that section.
 
 Before writing `.score`, Python should:
 
-- Normalize timbre presets and custom mixes to `mix <sine> <square>
-  <triangle> <saw>:` headers.
-- Normalize custom partials to `partials ...:` headers.
+- Normalize timbre presets and custom mixes to either `mix <sine> <square>
+  <triangle> <saw>:` or `partials ...:` headers. Presets may also expand to
+  optional filter, envelope, noise, or vibrato tokens.
+- Normalize custom partials to strict `partials ...:` headers.
 - Add optional `highpass`, `lowpass`, `noise`, `envelope`, and `vibrato`
-  fields only when the JSON timbre asks for them.
+  fields when the JSON timbre asks for them directly or through a preset.
 - Drop or reject unsupported score tokens.
 - Ensure every rendered part starts with a valid timbre header.
 - Ensure the first note/rest in a non-empty part establishes length and octave.

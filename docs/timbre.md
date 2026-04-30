@@ -99,19 +99,33 @@ The first partial is the fundamental, the second is harmonic 2, and so on.
 - `saw`: bright, rich, all harmonics. Useful for string-like or synth-like
   tones, but can sound harsh without filtering.
 
-The organ presets are simple blends of those base waves:
+The organ presets start from those base-wave mixes, then add mild filtering and
+note shaping. They can still be written as compact preset strings in JSON;
+Python expands them before rendering.
 
-| Preset | Sine | Square | Triangle | Saw | Character |
-| --- | ---: | ---: | ---: | ---: | --- |
-| `soft organ` | 0.55 | 0.10 | 0.35 | 0.00 | rounded and gentle |
-| `bright organ` | 0.30 | 0.20 | 0.20 | 0.30 | clearer edge and more upper harmonics |
-| `reed organ` | 0.20 | 0.45 | 0.10 | 0.25 | nasal, reedy, stronger odd harmonics |
-| `mellow organ` | 0.70 | 0.05 | 0.25 | 0.00 | smooth and low-fatigue |
-| `string organ` | 0.25 | 0.05 | 0.30 | 0.40 | brighter, more string-pad-like |
-| `warm synth organ` | 0.40 | 0.15 | 0.30 | 0.15 | balanced warm synth-organ tone |
+| Preset | Mix: sine square triangle saw | Filter | Envelope: attack decay sustain release | Extra | Character |
+| --- | --- | --- | --- | --- | --- |
+| `soft organ` | `0.55 0.10 0.35 0.00` | lowpass `5200` | `18 0 1.00 90` | none | rounded and gentle |
+| `bright organ` | `0.30 0.20 0.20 0.30` | highpass `60`, lowpass `7800` | `12 0 1.00 70` | none | clearer edge and more upper harmonics |
+| `reed organ` | `0.20 0.45 0.10 0.25` | highpass `120`, lowpass `6200` | `25 0 1.00 100` | noise `0.01` | nasal, reedy, stronger odd harmonics |
+| `mellow organ` | `0.70 0.05 0.25 0.00` | lowpass `4200` | `25 0 1.00 120` | none | smooth and low-fatigue |
+| `string organ` | `0.25 0.05 0.30 0.40` | highpass `100`, lowpass `5000` | `35 0 0.95 160` | noise `0.005` | brighter, more string-pad-like |
+| `warm synth organ` | `0.40 0.15 0.30 0.15` | lowpass `6000` | `22 0 0.98 120` | vibrato `0.03` | balanced warm synth-organ tone |
 
-They are not physical instrument models. They are stable, simple tones that are
-easy to render quickly and tend to be comfortable for the ear.
+Additional presets use additive partials. These are still synthetic recipes,
+but they are better starting points for acoustic-like timbres than a four-wave
+mix.
+
+| Preset | Source | Filter | Envelope: attack decay sustain release | Extra | Character |
+| --- | --- | --- | --- | --- | --- |
+| `baroque violin` | 12 partials | highpass `120`, lowpass `4500` | `35 70 0.88 140` | noise `0.025`, vibrato `0` | bowed string approximation without vibrato |
+| `viola da gamba` | 8 partials | highpass `80`, lowpass `3800` | `45 90 0.82 180` | noise `0.018` | darker bowed bass/alto string color |
+| `recorder` | 6 partials | highpass `200`, lowpass `6500` | `18 40 0.96 90` | noise `0.015` | breathy, direct wind tone |
+| `lute` | 8 partials | highpass `90`, lowpass `5000` | `4 160 0.25 90` | noise `0.006` | plucked, quick-decay tone |
+| `harpsichord` | 10 partials | highpass `80`, lowpass `7500` | `2 220 0.18 80` | noise `0.004` | bright plucked keyboard tone |
+
+They are not physical instrument models. They are stable, simple recipes that
+are easy to render quickly and tend to be comfortable for the ear.
 
 ## UI Visualization
 
@@ -226,8 +240,8 @@ notes more expressive, but it is not required for a pleasant organ-like sound.
 
 ## Toward Baroque Violin
 
-A baroque violin-like tone needs more than a static waveform, but a useful
-minimum could be:
+A baroque violin-like tone needs more than a static waveform. The current
+`baroque violin` preset uses the useful minimum:
 
 - many harmonic `partials`, because bowed strings are harmonically rich.
 - moderate `lowpass`, roughly in the `3000..6000` Hz range, to avoid a harsh
@@ -235,7 +249,8 @@ minimum could be:
 - small `noise`, around `0.01..0.04`, to suggest bow contact.
 - a bow-like envelope: short but not instant attack, high sustain, and a natural
   release.
-- `vibrato.depth: 0`, because the target is baroque violin without vibrato.
+- no vibrato, because the target is baroque violin without modern continuous
+  vibrato.
 
 The hardest part is that real violin timbre changes over time during the bow
 attack, sustain, and release. The current `envelope` and `partials` are static;
