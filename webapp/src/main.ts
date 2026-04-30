@@ -78,6 +78,7 @@ type ElementRef = {
   name: HTMLInputElement;
   timbre: HTMLSelectElement;
   mixPanel: HTMLElement;
+  mixDetails: HTMLDetailsElement;
   mixInputs: Record<keyof MixWeights, HTMLInputElement>;
   mixText: HTMLInputElement;
   timbreCanvas: HTMLCanvasElement;
@@ -511,6 +512,13 @@ function setCustomMix(ref: ElementRef, mix: MixWeights) {
   updateTimbreVisuals(ref);
 }
 
+function setMixDetailsOpen(ref: ElementRef, open: boolean) {
+  ref.mixDetails.open = open;
+  if (open) {
+    requestAnimationFrame(() => updateTimbreVisuals(ref));
+  }
+}
+
 function parseCustomMixText(value: string, fallback: MixWeights): MixWeights {
   const parts = value.split(/[,\s]+/).filter(Boolean);
   return normalizeMix(parts.map((part) => Number(part)), fallback);
@@ -587,6 +595,7 @@ function applyProject(project: Omit<ScorePayload, "filename">) {
     ref.name.value = part.name || `part ${index + 1}`;
     ref.timbre.value = preset;
     setCustomMix(ref, mix);
+    setMixDetailsOpen(ref, preset === "custom");
     ref.score.value = part.score || "";
   });
 }
@@ -803,6 +812,8 @@ function renderPartInputs() {
     mixPanel.className = "custom-mix";
 
     const mixInputs = {} as Record<keyof MixWeights, HTMLInputElement>;
+    const mixSliderGroup = document.createElement("div");
+    mixSliderGroup.className = "mix-sliders";
     mixKeys.forEach((key) => {
       const label = document.createElement("label");
       label.className = "mix-slider";
@@ -821,10 +832,14 @@ function renderPartInputs() {
       });
       label.appendChild(text);
       label.appendChild(input);
-      mixPanel.appendChild(label);
+      mixSliderGroup.appendChild(label);
       mixInputs[key] = input;
     });
 
+    const mixRow = document.createElement("label");
+    mixRow.className = "mix-values-row";
+    const mixTextLabel = document.createElement("span");
+    mixTextLabel.textContent = "mix";
     const mixText = document.createElement("input");
     mixText.className = "mix-values";
     mixText.value = mixKeys.map((key) => presetMixes.triangle[key]).join(", ");
@@ -837,13 +852,16 @@ function renderPartInputs() {
         parseCustomMixText(mixText.value, mixFromInputs(ref)),
       );
     });
+    mixRow.appendChild(mixTextLabel);
+    mixRow.appendChild(mixText);
 
     const mixDetails = document.createElement("details");
     mixDetails.className = "mix-details";
     const mixSummary = document.createElement("summary");
-    mixSummary.textContent = "mix";
+    mixSummary.textContent = "waveform";
     mixDetails.appendChild(mixSummary);
-    mixDetails.appendChild(mixText);
+    mixDetails.appendChild(mixRow);
+    mixDetails.appendChild(mixSliderGroup);
 
     const plotGrid = document.createElement("div");
     plotGrid.className = "timbre-plots";
@@ -877,7 +895,9 @@ function renderPartInputs() {
     timbre.addEventListener("change", () => {
       const ref = partRefs[i];
       const preset = normalizePreset(timbre.value);
-      if (preset !== "custom") {
+      if (preset === "custom") {
+        setMixDetailsOpen(ref, true);
+      } else {
         setCustomMix(ref, presetMixes[preset]);
       }
     });
@@ -917,6 +937,7 @@ function renderPartInputs() {
       name,
       timbre,
       mixPanel,
+      mixDetails,
       mixInputs,
       mixText,
       timbreCanvas,
