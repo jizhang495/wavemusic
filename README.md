@@ -36,6 +36,7 @@ WaveMusic stores projects as JSON files in `sheets/`:
   "time_signature": "4/4",
   "bpm": 100,
   "sample_rate": 44100,
+  "transpose": 0,
   "parts": [
     {
       "name": "lead",
@@ -47,7 +48,8 @@ WaveMusic stores projects as JSON files in `sheets/`:
 ```
 
 The `score` field keeps the compact note syntax. The JSON wrapper stores
-project metadata and per-part settings.
+project metadata and per-part settings. `transpose` is a whole-number semitone
+offset applied at render time.
 
 `waveform` can be a simple preset name such as `sine`, `square`, `triangle`,
 `saw`, `soft organ`, or `warm synth organ`. For custom timbre, use a mix of the
@@ -72,9 +74,9 @@ four base waves:
 JSON is the project format because it is explicit, easy to validate, and maps
 directly to the web UI. It is also a better target for AI-generated music:
 future prompt-based generation can ask a model for one JSON object with
-`title`, `key`, `time_signature`, `bpm`, `sample_rate`, and `parts`, while the
-model only needs to learn WaveMusic's compact note syntax inside each `score`
-field.
+`title`, `key`, `time_signature`, `bpm`, `sample_rate`, `transpose`, and
+`parts`, while the model only needs to learn WaveMusic's compact note syntax
+inside each `score` field.
 
 Before rendering, Python converts the JSON project into an internal `.score`
 stream for the C++ engine. The `.score` format contains only render data, such
@@ -145,27 +147,62 @@ Architecture of audio engine
 
 To build and run directly:
 ```bash
-make simple
-./simple /tmp/wavemusic-main.score
-```
-
-You can also render the sample `.score` fixtures intended for engine tests:
-
-```bash
 ./simple tests/fixtures/score/basic_triangle.score
 ```
 
 for debug mode:
 ```bash
 make refresh DEBUG=1
-./simple /tmp/wavemusic-main.score
+./simple tests/fixtures/score/basic_triangle.score --no-play
 ```
+
+Full flag example:
+```bash
+./simple \
+  --score=tests/fixtures/score/basic_triangle.score \
+  --out=/tmp/basic_triangle.wav \
+  --sample-rate=44100 \
+  --bpm=100 \
+  --transpose=0 \
+  --no-play
+```
+
+Flags:
+
+- `--score=<path>`: input `.score` file. A positional score path also works.
+- `--out=<path>`: output WAV path. If omitted, writes `m.wav`.
+- `--sample-rate=<hz>`: output sample rate. Defaults to `44100`.
+- `--bpm=<beats>`: tempo. Defaults to `100`.
+- `--transpose=<semitones>`: whole-number pitch shift in semitones. Defaults
+  to `0`.
+- `--no-play` or `--silent`: render the WAV without starting playback.
 
 The C++ executable renders the internal score stream. Normal project files are
 JSON and should be rendered through `main.py` or the web app. The `.score`
 fixtures under `tests/fixtures/score/` should strictly follow
 [docs/score-format.md](docs/score-format.md), because `.score` is the narrow
-format parsed by the C++ engine.
+format parsed by the C++ engine. BPM, sample rate, and transpose are runtime
+flags, not `.score` syntax.
+
+When rendering a JSON project through `main.py`, Python converts it to a
+temporary `.score` file before calling the C++ engine. The CLI uses a unique
+path like `/tmp/wavemusic-*/main.score` while rendering and then removes it, so
+two renders cannot overwrite the same intermediate file. The web API keeps
+generated intermediates under `/tmp/wavemusic/` by default, or under
+`WAVEMUSIC_GENERATED_DIR` if that environment variable is set.
+
+To inspect or reuse a stable intermediate `.score` file, write one explicitly:
+```bash
+uv run python - <<'PY' > /tmp/wavemusic-main.score
+from pathlib import Path
+from scripts.project import compose_score, load_project
+
+project = load_project(Path("sheets/pokemoncentre.json"))
+print(compose_score(project["parts"]))
+PY
+
+./simple /tmp/wavemusic-main.score --out=/tmp/pokemoncentre.wav --no-play
+```
 
 ### Python API Layer
 
@@ -232,7 +269,7 @@ Python TODO list:
  - [ ] add docs
  - [x] use C++ code as a backend
  - [x] add waveforms.py to store functions for each waveform
- - [ ] add Entry with up/down for transpose
+ - [x] add Entry with up/down for transpose
  - [ ] use () to pass frequecies or chords
  - [x] add bpm and sample rate selection
  - [ ] use numpy for faster performance

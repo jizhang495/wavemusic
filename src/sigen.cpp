@@ -10,6 +10,7 @@
 
 uint32_t g_sample_rate = DEFAULT_SAMPLE_RATE;
 uint32_t g_bpm = DEFAULT_BPM;
+int32_t g_transpose = DEFAULT_TRANSPOSE;
 
 f_lut_t note_t::construct_lut() {
     f_lut_t f_lut = {
@@ -34,7 +35,7 @@ note_t::note_t(wave_t w, int l, std::string n, int o) {
     length = l;
     name   = n;
     octave = o;
-    freq   = f_lut[n] * pow(2.0, octave-4);
+    freq   = f_lut[n] * pow(2.0, octave-4 + g_transpose/12.0);
 }
 
 // TODO: pass in 2 data points instead of the whole piece if that's faster?

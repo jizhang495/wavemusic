@@ -15,6 +15,7 @@
 
 #define DEFAULT_SAMPLE_RATE 44100
 #define DEFAULT_BPM 100
+#define DEFAULT_TRANSPOSE 0
 // Amplitudes defined for constant RMS
 #define SIN_AMP 2828
 #define SQR_AMP 2000
@@ -25,6 +26,7 @@
 
 extern uint32_t g_sample_rate;
 extern uint32_t g_bpm;
+extern int32_t g_transpose;
 
 struct wave_t {
     float sine;

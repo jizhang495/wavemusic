@@ -177,10 +177,20 @@ void set_uint_arg(const std::string &value, uint32_t &target) {
     } catch (...) {}
 }
 
+void set_int_arg(const std::string &value, int32_t &target) {
+    try {
+        target = static_cast<int32_t>(std::stoi(value));
+    } catch (...) {}
+}
+
 int playscore(int argc, char **argv) {
     #ifdef DEBUG
     static_assert(sizeof(wav_hdr_t) == 44, "wav_hdr_t size error");
     #endif
+
+    g_sample_rate = DEFAULT_SAMPLE_RATE;
+    g_bpm = DEFAULT_BPM;
+    g_transpose = DEFAULT_TRANSPOSE;
 
     std::string score_filename;
     std::string output_filename = FILE_NAME;
@@ -211,6 +221,11 @@ int playscore(int argc, char **argv) {
 
         if (arg.rfind("--bpm=", 0) == 0) {
             set_uint_arg(arg.substr(6), g_bpm);
+            continue;
+        }
+
+        if (arg.rfind("--transpose=", 0) == 0) {
+            set_int_arg(arg.substr(12), g_transpose);
             continue;
         }
 

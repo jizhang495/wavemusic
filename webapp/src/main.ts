@@ -32,6 +32,7 @@ interface MusicProject {
   time_signature: string;
   bpm: number;
   sample_rate: number;
+  transpose: number;
   parts: ProjectPartPayload[];
 }
 
@@ -43,6 +44,7 @@ interface RenderRequest {
   filename: string;
   sample_rate: number;
   bpm: number;
+  transpose: number;
   use_cpp: boolean;
 }
 
@@ -51,6 +53,7 @@ interface PreviewRequest {
   line: string;
   sample_rate: number;
   bpm: number;
+  transpose: number;
   use_cpp: boolean;
 }
 
@@ -67,6 +70,7 @@ interface ScorePayload {
   time_signature: string;
   bpm: number;
   sample_rate: number;
+  transpose: number;
   parts: PartPayload[];
 }
 
@@ -157,6 +161,14 @@ container.innerHTML = `
       <input id="title-input" value="untitled" placeholder="untitled" />
     </label>
     <label>
+      <span>Key</span>
+      <input id="key-input" value="c major" placeholder="c major" />
+    </label>
+    <label>
+      <span>Time Signature</span>
+      <input id="time-signature-input" value="4/4" placeholder="4/4" />
+    </label>
+    <label>
       <span>BPM</span>
       <input id="bpm-input" type="number" min="20" max="300" value="100" />
     </label>
@@ -165,12 +177,8 @@ container.innerHTML = `
       <input id="sample-rate" type="number" min="8000" max="96000" step="1000" value="44100" />
     </label>
     <label>
-      <span>Key</span>
-      <input id="key-input" value="c major" placeholder="c major" />
-    </label>
-    <label>
-      <span>Time Signature</span>
-      <input id="time-signature-input" value="4/4" placeholder="4/4" />
+      <span>Transpose</span>
+      <input id="transpose-input" type="number" min="-48" max="48" step="1" value="0" />
     </label>
     <button id="save-sheet" type="button">Save score</button>
     <button id="save-wav" type="button">Save WAV</button>
@@ -189,6 +197,7 @@ const sheetSelect = app.querySelector<HTMLSelectElement>("#sheet-select")!;
 const titleElement = app.querySelector<HTMLInputElement>("#title-input")!;
 const bpmElement = app.querySelector<HTMLInputElement>("#bpm-input")!;
 const sampleRateElement = app.querySelector<HTMLInputElement>("#sample-rate")!;
+const transposeElement = app.querySelector<HTMLInputElement>("#transpose-input")!;
 const keyElement = app.querySelector<HTMLInputElement>("#key-input")!;
 const timeSignatureElement = app.querySelector<HTMLInputElement>("#time-signature-input")!;
 const audioPlayer = app.querySelector<HTMLAudioElement>("#audio-player")!;
@@ -223,6 +232,13 @@ function clampBpm(value: number): number {
   return value;
 }
 
+function clampTranspose(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  if (value < -48) return -48;
+  if (value > 48) return 48;
+  return Math.trunc(value);
+}
+
 function partPayloads(): PartPayload[] {
   return partRefs.map((ref, index) => ({
     name: ref.name.value.trim() || `part ${index + 1}`,
@@ -255,6 +271,7 @@ function buildProject(): MusicProject {
     time_signature: timeSignatureElement.value.trim() || "4/4",
     bpm: clampBpm(Number(bpmElement.value)),
     sample_rate: clampSampleRate(Number(sampleRateElement.value)),
+    transpose: clampTranspose(Number(transposeElement.value)),
     parts: partRefs.map((ref, index) => ({
       name: ref.name.value.trim() || `part ${index + 1}`,
       waveform: waveformPayload(ref),
@@ -543,6 +560,7 @@ function normalizeProject(
     time_signature: timeSignature,
     bpm: clampBpm(Number(rawProject.bpm)),
     sample_rate: clampSampleRate(Number(rawProject.sample_rate)),
+    transpose: clampTranspose(Number(rawProject.transpose)),
     parts,
   };
 }
@@ -553,6 +571,7 @@ function applyProject(project: Omit<ScorePayload, "filename">) {
   timeSignatureElement.value = project.time_signature || "4/4";
   bpmElement.value = String(clampBpm(project.bpm));
   sampleRateElement.value = String(clampSampleRate(project.sample_rate));
+  transposeElement.value = String(clampTranspose(project.transpose));
 
   const normalized = [...project.parts];
   while (normalized.length < partRefs.length) {
@@ -581,6 +600,7 @@ function getPayload(): RenderRequest {
     filename: filenameFromTitle(".wav"),
     sample_rate: clampSampleRate(Number(sampleRateElement.value)),
     bpm: clampBpm(Number(bpmElement.value)),
+    transpose: clampTranspose(Number(transposeElement.value)),
     use_cpp: true,
   };
 }
@@ -744,6 +764,7 @@ async function playSelectedLine() {
     line,
     sample_rate: clampSampleRate(Number(sampleRateElement.value)),
     bpm: clampBpm(Number(bpmElement.value)),
+    transpose: clampTranspose(Number(transposeElement.value)),
     use_cpp: true,
   };
   const response = await apiPost<RenderResponse>("/api/preview-line", payload);

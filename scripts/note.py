@@ -46,7 +46,7 @@ class Note:
         else:
             raise ValueError(f"Invalid shape: {shape}. Expected 's', 'q', 't', 'w'.")
 
-    def note_to_wave(self, sample_rate, bpm=100):
+    def note_to_wave(self, sample_rate, bpm=100, transpose=0):
         semiquaver = 15 / bpm #s
         frames = int(self.length * semiquaver * sample_rate)
         value = []
@@ -54,23 +54,24 @@ class Note:
             for _i in range(frames):
                 value.append(0)
         else:
+            frequency = self.frequency * math.pow(2, transpose / 12)
             if self.shape == "s": # sine wave
                 for n in range(frames):
                     value.append(
-                        int(4000 * sine_wave_n(n, sample_rate, self.frequency))
+                        int(4000 * sine_wave_n(n, sample_rate, frequency))
                     )
             elif self.shape == "q": # square wave
                 for i in range(frames):
                     value.append(
-                        int(1000 * square_wave_n(i, sample_rate, self.frequency))
+                        int(1000 * square_wave_n(i, sample_rate, frequency))
                     )
             elif self.shape == "t": # triangle wave
                 for i in range(frames):
                     value.append(
-                        int(2000 * triangle_wave_n(i, sample_rate, self.frequency))
+                        int(2000 * triangle_wave_n(i, sample_rate, frequency))
                     )
             elif self.shape == "w": # saw wave
                 for i in range(frames):
-                    value.append(int(2000 * saw_wave_n(i, sample_rate, self.frequency)))
+                    value.append(int(2000 * saw_wave_n(i, sample_rate, frequency)))
 
         return value

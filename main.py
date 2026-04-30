@@ -10,6 +10,7 @@ from scripts.music import Music
 from scripts.project import (
     DEFAULT_BPM,
     DEFAULT_SAMPLE_RATE,
+    DEFAULT_TRANSPOSE,
     compose_score,
     load_project,
 )
@@ -82,12 +83,14 @@ def main(*args):
             score = compose_score(project["parts"])
             bpm = project["bpm"]
             sample_rate = project["sample_rate"]
+            transpose = project["transpose"]
             print(f"Score loaded from {project_file}")
         except FileNotFoundError:
             print(f"File {project_file} not found. Using default score.")
             score = "wave 0 0 1 0:\n2c4 2d 2e 2f | 4g 4r"
             bpm = DEFAULT_BPM
             sample_rate = DEFAULT_SAMPLE_RATE
+            transpose = DEFAULT_TRANSPOSE
         except ValueError as e:
             print(f"Error loading score: {e}")
             return
@@ -101,6 +104,7 @@ def main(*args):
                     str(score_path),
                     f"--sample-rate={sample_rate}",
                     f"--bpm={bpm}",
+                    f"--transpose={transpose}",
                 ]
                 if not should_play:
                     engine_args.append("--no-play")

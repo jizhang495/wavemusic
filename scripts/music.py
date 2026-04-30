@@ -56,10 +56,22 @@ class Music:
             note_obj.update(n)  # update the note name and frequency
             self.notes.append(note_obj)
 
-    def write_wav(self, filename="m.wav", sample_rate=44100, bpm=100): #44100 Hz
+    def write_wav(
+        self,
+        filename="m.wav",
+        sample_rate=44100,
+        bpm=100,
+        transpose=0,
+    ): #44100 Hz
         rawdata = []
         for note_obj in self.notes:
-            rawdata.extend(note_obj.note_to_wave(sample_rate=sample_rate, bpm=bpm))
+            rawdata.extend(
+                note_obj.note_to_wave(
+                    sample_rate=sample_rate,
+                    bpm=bpm,
+                    transpose=transpose,
+                )
+            )
 
         with wave.open(filename, "wb") as f:
             f.setnchannels(1)  # mono
@@ -70,16 +82,32 @@ class Music:
             # for d in rawdata:
             #     f.writeframesraw(struct.pack("<h", d))
 
-    def playscore(self, filename="m.wav", sample_rate=44100, bpm=100):
-        self.write_wav(filename=filename, sample_rate=sample_rate, bpm=bpm)
+    def playscore(self, filename="m.wav", sample_rate=44100, bpm=100, transpose=0):
+        self.write_wav(
+            filename=filename,
+            sample_rate=sample_rate,
+            bpm=bpm,
+            transpose=transpose,
+        )
         play_wav(filename=filename)
 
-    def play_from_playsound(self, filename="m.wav", sample_rate=44100, bpm=100):
+    def play_from_playsound(
+        self,
+        filename="m.wav",
+        sample_rate=44100,
+        bpm=100,
+        transpose=0,
+    ):
         """Play the music using playsound after writing WAV.
         """
         global ps
         if ps is None:
             from playsound import playsound
             ps = playsound
-        self.write_wav(filename=filename, sample_rate=sample_rate, bpm=bpm)
+        self.write_wav(
+            filename=filename,
+            sample_rate=sample_rate,
+            bpm=bpm,
+            transpose=transpose,
+        )
         ps(filename=filename)

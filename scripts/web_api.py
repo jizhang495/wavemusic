@@ -24,7 +24,10 @@ from scripts.project import (
     DEFAULT_SAMPLE_RATE,
     DEFAULT_TIME_SIGNATURE,
     DEFAULT_TITLE,
+    DEFAULT_TRANSPOSE,
     DEFAULT_WAVEFORM,
+    MAX_TRANSPOSE,
+    MIN_TRANSPOSE,
     PART_COUNT,
     clamp_int,
     compose_score,
@@ -151,6 +154,7 @@ def _render_score_to_file(
     *,
     sample_rate: int = 44100,
     bpm: int = 100,
+    transpose: int = 0,
     use_cpp: bool = True,
 ) -> Path:
     sample_rate = clamp_int(
@@ -160,6 +164,12 @@ def _render_score_to_file(
         maximum=96000,
     )
     bpm = clamp_int(bpm, default=DEFAULT_BPM, minimum=20, maximum=300)
+    transpose = clamp_int(
+        transpose,
+        default=DEFAULT_TRANSPOSE,
+        minimum=MIN_TRANSPOSE,
+        maximum=MAX_TRANSPOSE,
+    )
 
     if not score_text.strip():
         raise HTTPException(status_code=400, detail="Score is empty.")
@@ -181,6 +191,7 @@ def _render_score_to_file(
                         f"--out={audio_path}",
                         f"--sample-rate={sample_rate}",
                         f"--bpm={bpm}",
+                        f"--transpose={transpose}",
                     ]
                 )
 
@@ -199,12 +210,14 @@ def _render_score_to_file(
                     filename=str(audio_path),
                     sample_rate=sample_rate,
                     bpm=bpm,
+                    transpose=transpose,
                 )
         else:
             Music(score_text).write_wav(
                 filename=str(audio_path),
                 sample_rate=sample_rate,
                 bpm=bpm,
+                transpose=transpose,
             )
 
     if not _wav_has_audio(audio_path):
@@ -231,6 +244,7 @@ class RenderRequest(BaseModel):
     filename: str = Field(default="m.wav")
     sample_rate: int = Field(default=DEFAULT_SAMPLE_RATE)
     bpm: int = Field(default=DEFAULT_BPM)
+    transpose: int = Field(default=DEFAULT_TRANSPOSE)
     use_cpp: bool = Field(default=True)
 
 
@@ -239,6 +253,7 @@ class PreviewRequest(BaseModel):
     line: str = Field(default="")
     sample_rate: int = Field(default=DEFAULT_SAMPLE_RATE)
     bpm: int = Field(default=DEFAULT_BPM)
+    transpose: int = Field(default=DEFAULT_TRANSPOSE)
     use_cpp: bool = Field(default=True)
 
 
@@ -256,6 +271,7 @@ class SaveRequest(BaseModel):
     time_signature: str = Field(default=DEFAULT_TIME_SIGNATURE)
     bpm: int = Field(default=DEFAULT_BPM)
     sample_rate: int = Field(default=DEFAULT_SAMPLE_RATE)
+    transpose: int = Field(default=DEFAULT_TRANSPOSE)
     parts: list[Part] = Field(default_factory=_default_parts)
 
 
@@ -266,6 +282,7 @@ class ScoreResponse(BaseModel):
     time_signature: str
     bpm: int
     sample_rate: int
+    transpose: int
     parts: list[Part]
 
 
@@ -314,6 +331,7 @@ def render_score(payload: RenderRequest):
         filename=payload.filename,
         sample_rate=payload.sample_rate,
         bpm=payload.bpm,
+        transpose=payload.transpose,
         use_cpp=payload.use_cpp,
     )
 
@@ -341,6 +359,7 @@ def preview_line(payload: PreviewRequest):
         filename=f"preview-{uuid.uuid4().hex}.wav",
         sample_rate=payload.sample_rate,
         bpm=payload.bpm,
+        transpose=payload.transpose,
         use_cpp=payload.use_cpp,
     )
     return RenderResponse(

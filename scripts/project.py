@@ -23,6 +23,9 @@ WAVE_PRESETS = {
 DEFAULT_WAVEFORM = "triangle"
 DEFAULT_BPM = 100
 DEFAULT_SAMPLE_RATE = 44100
+DEFAULT_TRANSPOSE = 0
+MIN_TRANSPOSE = -48
+MAX_TRANSPOSE = 48
 DEFAULT_TITLE = "untitled"
 DEFAULT_KEY = "c major"
 DEFAULT_TIME_SIGNATURE = "4/4"
@@ -200,6 +203,12 @@ def normalize_project(
             default=DEFAULT_SAMPLE_RATE,
             minimum=8000,
             maximum=96000,
+        ),
+        "transpose": clamp_int(
+            raw_project.get("transpose"),
+            default=DEFAULT_TRANSPOSE,
+            minimum=MIN_TRANSPOSE,
+            maximum=MAX_TRANSPOSE,
         ),
         "parts": parts,
     }
