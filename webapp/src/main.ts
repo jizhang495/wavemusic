@@ -76,6 +76,8 @@ type ElementRef = {
   mixPanel: HTMLElement;
   mixInputs: Record<keyof WaveMix, HTMLInputElement>;
   mixText: HTMLInputElement;
+  waveCanvas: HTMLCanvasElement;
+  spectrumCanvas: HTMLCanvasElement;
   score: HTMLTextAreaElement;
 };
 
@@ -371,11 +373,125 @@ function waveformPayload(ref: ElementRef): Waveform {
   return preset;
 }
 
+function mixedWaveSample(phase: number, mix: WaveMix): number {
+  const total = waveKeys.reduce((sum, key) => sum + mix[key], 0);
+  if (total <= 0) return 0;
+
+  const sine = Math.sin(2 * Math.PI * phase);
+  const square = phase < 0.5 ? 1 : -1;
+  const triangle = 1 - 4 * Math.abs(phase - 0.5);
+  const saw = 2 * phase - 1;
+
+  return (
+    (mix.sine * sine
+      + mix.square * square
+      + mix.triangle * triangle
+      + mix.saw * saw)
+    / total
+  );
+}
+
+function resizeCanvas(canvas: HTMLCanvasElement) {
+  const scale = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(180, Math.round(rect.width || 220));
+  const height = Math.max(64, Math.round(rect.height || 72));
+  canvas.width = Math.round(width * scale);
+  canvas.height = Math.round(height * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  return { ctx, width, height };
+}
+
+function drawWaveform(canvas: HTMLCanvasElement, mix: WaveMix) {
+  const resized = resizeCanvas(canvas);
+  if (!resized) return;
+  const { ctx, width, height } = resized;
+  const mid = height / 2;
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeStyle = "#e5e7eb";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, mid);
+  ctx.lineTo(width, mid);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#0f766e";
+  ctx.lineWidth = 1.7;
+  ctx.beginPath();
+  for (let x = 0; x < width; x += 1) {
+    const phase = x / Math.max(1, width - 1);
+    const y = mid - mixedWaveSample(phase, mix) * (height * 0.38);
+    if (x === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+  ctx.stroke();
+}
+
+function spectrumValues(mix: WaveMix): number[] {
+  const sampleCount = 256;
+  const harmonicCount = 16;
+  const values: number[] = [];
+
+  for (let harmonic = 1; harmonic <= harmonicCount; harmonic += 1) {
+    let real = 0;
+    let imag = 0;
+    for (let i = 0; i < sampleCount; i += 1) {
+      const phase = i / sampleCount;
+      const sample = mixedWaveSample(phase, mix);
+      const angle = -2 * Math.PI * harmonic * phase;
+      real += sample * Math.cos(angle);
+      imag += sample * Math.sin(angle);
+    }
+    values.push((2 * Math.hypot(real, imag)) / sampleCount);
+  }
+
+  const max = Math.max(...values, 1);
+  return values.map((value) => value / max);
+}
+
+function drawSpectrum(canvas: HTMLCanvasElement, mix: WaveMix) {
+  const resized = resizeCanvas(canvas);
+  if (!resized) return;
+  const { ctx, width, height } = resized;
+  const values = spectrumValues(mix);
+  const gap = 3;
+  const barWidth = Math.max(4, (width - gap * (values.length - 1)) / values.length);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeStyle = "#e5e7eb";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, height - 1);
+  ctx.lineTo(width, height - 1);
+  ctx.stroke();
+
+  ctx.fillStyle = "#1d4ed8";
+  values.forEach((value, index) => {
+    const barHeight = Math.max(1, value * (height - 8));
+    const x = index * (barWidth + gap);
+    const y = height - barHeight - 1;
+    ctx.fillRect(x, y, barWidth, barHeight);
+  });
+}
+
+function updateWaveVisuals(ref: ElementRef) {
+  const mix = mixFromInputs(ref);
+  ref.mixText.value = waveKeys.map((key) => mix[key]).join(", ");
+  drawWaveform(ref.waveCanvas, mix);
+  drawSpectrum(ref.spectrumCanvas, mix);
+}
+
 function setCustomMix(ref: ElementRef, mix: WaveMix) {
   waveKeys.forEach((key) => {
     ref.mixInputs[key].value = String(mix[key]);
   });
-  ref.mixText.value = waveKeys.map((key) => mix[key]).join(", ");
+  updateWaveVisuals(ref);
 }
 
 function parseCustomMixText(value: string, fallback: WaveMix): WaveMix {
@@ -700,7 +816,42 @@ function renderPartInputs() {
         parseCustomMixText(mixText.value, mixFromInputs(ref)),
       );
     });
-    mixPanel.appendChild(mixText);
+
+    const mixDetails = document.createElement("details");
+    mixDetails.className = "mix-details";
+    const mixSummary = document.createElement("summary");
+    mixSummary.textContent = "mix";
+    mixDetails.appendChild(mixSummary);
+    mixDetails.appendChild(mixText);
+
+    const plotGrid = document.createElement("div");
+    plotGrid.className = "wave-plots";
+
+    const wavePlot = document.createElement("figure");
+    const waveCanvas = document.createElement("canvas");
+    waveCanvas.ariaLabel = "waveform over one period";
+    const waveCaption = document.createElement("figcaption");
+    waveCaption.textContent = "wave";
+    wavePlot.appendChild(waveCanvas);
+    wavePlot.appendChild(waveCaption);
+
+    const spectrumPlot = document.createElement("figure");
+    const spectrumCanvas = document.createElement("canvas");
+    spectrumCanvas.ariaLabel = "frequency spectrum";
+    const spectrumCaption = document.createElement("figcaption");
+    spectrumCaption.textContent = "spectrum";
+    spectrumPlot.appendChild(spectrumCanvas);
+    spectrumPlot.appendChild(spectrumCaption);
+
+    plotGrid.appendChild(wavePlot);
+    plotGrid.appendChild(spectrumPlot);
+    mixDetails.appendChild(plotGrid);
+    mixDetails.addEventListener("toggle", () => {
+      if (mixDetails.open) {
+        updateWaveVisuals(partRefs[i]);
+      }
+    });
+    mixPanel.appendChild(mixDetails);
 
     waveform.addEventListener("change", () => {
       const ref = partRefs[i];
@@ -747,13 +898,20 @@ function renderPartInputs() {
       mixPanel,
       mixInputs,
       mixText,
+      waveCanvas,
+      spectrumCanvas,
       score: textarea,
     });
+    setCustomMix(partRefs[i], presetMixes.triangle);
   }
   syncPartEditorHeights();
 }
 
 renderPartInputs();
+
+window.addEventListener("resize", () => {
+  partRefs.forEach(updateWaveVisuals);
+});
 
 const resizeHandle = document.createElement("div");
 resizeHandle.className = "parts-resize-handle";

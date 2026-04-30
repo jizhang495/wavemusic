@@ -211,6 +211,43 @@ body {
   font-size: 0.85rem;
 }
 
+.mix-details {
+  font-size: 0.85rem;
+}
+
+.mix-details summary {
+  cursor: pointer;
+  margin: 0.05rem 0 0.35rem;
+}
+
+.mix-details .mix-values {
+  margin-bottom: 0.45rem;
+}
+
+.wave-plots {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.wave-plots figure {
+  margin: 0;
+}
+
+.wave-plots canvas {
+  display: block;
+  width: 100%;
+  height: 68px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.wave-plots figcaption {
+  margin-top: 0.15rem;
+  color: #475569;
+  font-size: 0.76rem;
+}
+
 .parts-resize-handle {
   display: flex;
   justify-content: center;

@@ -242,7 +242,7 @@ Python TODO list:
  - [ ] add timber
  - [x] GUI (maybe try webapp next? Electrojs?)
  - [ ] add polyphony (fugue)
- - [ ] live waveform plotting matplotlib like oscilloscope
+ - [x] live waveform plotting matplotlib like oscilloscope
  - [x] playsound on the go with Enter (plays the line just completed)
  - [ ] threading, running playsound at background (already okay with vlc open)
 
