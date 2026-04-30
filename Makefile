@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++11 -O2
+CXXFLAGS = -Wall -Wextra -Werror -std=c++17 -O2
 
 ifdef DEBUG
 CXXFLAGS += -DDEBUG

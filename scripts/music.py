@@ -36,6 +36,15 @@ class Music:
                         weights.append(0)
                 shape = ["s", "q", "t", "w"][weights.index(max(weights))]
                 i += 5
+                while i < len(notelist) and not notelist[i - 1].endswith(":"):
+                    i += 1
+                continue
+
+            if n == "partials":
+                shape = "s"
+                i += 1
+                while i < len(notelist) and not notelist[i - 1].endswith(":"):
+                    i += 1
                 continue
 
             # When encountering label words, update shape.

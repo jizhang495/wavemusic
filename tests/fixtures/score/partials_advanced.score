@@ -1,0 +1,5 @@
+partials 1 0.55 0.35 0.25 0.18 0.12 0.08 0.05 highpass 120 lowpass 4500 noise 0.02 envelope 25 60 0.9 120 vibrato 0:
+4c4 d e f | 8g
+
+mix 0.25 0.05 0.3 0.4 lowpass 5000 envelope 20 0 1 80:
+4c3 g c4 g

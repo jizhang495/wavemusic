@@ -206,6 +206,13 @@ body {
   margin-bottom: 0.45rem;
 }
 
+.source-partials .mix-sliders,
+.source-partials .mix-values-row,
+.source-mix .partials-row,
+.advanced-panel.is-disabled {
+  opacity: 0.45;
+}
+
 .mix-slider {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
@@ -222,12 +229,36 @@ body {
   font-size: 0.85rem;
 }
 
-.mix-values-row {
+.source-row {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-columns: auto 64px minmax(0, 1fr);
   align-items: center;
   gap: 0.45rem;
   margin-bottom: 0.45rem;
+}
+
+.partials-row {
+  grid-template-columns: auto 64px minmax(0, 1fr);
+}
+
+.source-row input[type="radio"],
+.advanced-toggle input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 58px;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.45rem;
+}
+
+.filter-row button {
+  width: auto;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.78rem;
 }
 
 .mix-details {
@@ -265,6 +296,25 @@ body {
   margin-top: 0.15rem;
   color: #475569;
   font-size: 0.76rem;
+}
+
+.advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.5rem 0 0.45rem;
+}
+
+.advanced-panel {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.advanced-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .parts-resize-handle {

@@ -1,15 +1,15 @@
 # Timbre JSON Format
 
-WaveMusic currently stores each part's tone color in the `timbre` JSON field.
-This is a simple timbre format based on mixing four base waveforms. Future
-versions may add richer fields under `timbre` for partials, filtering,
-envelopes, noise, and vibrato.
+WaveMusic stores each part's tone color in the `timbre` JSON field. The current
+format supports either a four-wave mix or additive partials, with optional
+filtering, envelope, noise, and vibrato.
 
 The current `timbre` field is the user-facing version of what the C++ engine
 receives as a `.score` header:
 
 ```text
 mix <sine> <square> <triangle> <saw>:
+partials <harmonic-1> <harmonic-2> ...:
 ```
 
 The JSON format is easier for users, the UI, and AI generation. Python
@@ -74,6 +74,22 @@ The C++ engine normalizes the four weights by their sum before synthesis. That
 means `mix 1 1 1 1:` changes tone color without making output four times
 louder. A mix of all zeros is silence.
 
+For additive synthesis, use `partials` instead of `mix`:
+
+```json
+{
+  "name": "lead",
+  "timbre": {
+    "preset": "custom",
+    "partials": [1.0, 0.55, 0.35, 0.25, 0.18, 0.12, 0.08, 0.05]
+  },
+  "score": ["2c4 d e f | 4g r"]
+}
+```
+
+The first partial is the fundamental, the second is harmonic 2, and so on.
+`mix` and `partials` should be mutually exclusive in one `timbre` object.
+
 ## What The Four Waves Do
 
 - `sine`: smoothest tone, only the fundamental. It is clean but can sound thin.
@@ -99,12 +115,13 @@ easy to render quickly and tend to be comfortable for the ear.
 
 ## UI Visualization
 
-The UI's expandable `waveform` section shows the mix values, sliders, and two
-plots.
+The UI's expandable `timbre` section shows source controls, filters, plots, and
+advanced shaping controls.
 
 ### Wave Plot
 
-The wave plot draws one period of the mixed waveform.
+The wave plot draws one period of the selected source waveform. For `mix`, it
+uses the four base waves. For `partials`, it sums sine harmonics.
 
 For each horizontal pixel, the UI computes a phase from `0..1`, generates the
 four base waves at that phase, mixes them by the current slider values, and
@@ -119,8 +136,9 @@ sample =
   / total_weight
 ```
 
-The plot is a shape preview. It does not include note pitch, sample rate, BPM,
-the C++ amplitude constants, attack/release filtering, or low-pass filtering.
+If highpass or lowpass is enabled, the plot applies a simple first-order filter
+preview at a reference pitch. The plot is still a shape preview: it does not
+include BPM, the C++ amplitude constants, envelope, vibrato, or noise.
 
 ### Spectrum Plot
 
@@ -147,12 +165,9 @@ The bars are normalized so the largest visible harmonic has full height. The
 plot shows relative color, not absolute loudness, and it is not an analysis of
 the rendered WAV file.
 
-## Future Timbre Fields
+## Filters And Motion
 
-A richer future `timbre` object can keep `preset`, then use either `mix` or
-`partials` as the tone source. `filter`, `noise`, `envelope`, and `vibrato`
-would be optional shaping layers on top. Today, WaveMusic renders `preset` and
-`mix`; the other fields are planned.
+Optional shaping fields can be layered on top of either `mix` or `partials`:
 
 ```json
 {
@@ -162,6 +177,7 @@ would be optional shaping layers on top. Today, WaveMusic renders `preset` and
     "partials": [1.0, 0.45, 0.3, 0.18, 0.12, 0.08, 0.05],
     "noise": 0.02,
     "filter": {
+      "highpass": 120,
       "lowpass": 4500
     },
     "envelope": {
@@ -178,23 +194,20 @@ would be optional shaping layers on top. Today, WaveMusic renders `preset` and
 }
 ```
 
-Possible meanings:
+Meanings:
 
 - `preset`: named starting point. `custom` means the part supplies its own
   source settings.
-- `mix`: current implemented source: weighted sine, square, triangle, and saw.
+- `mix`: weighted sine, square, triangle, and saw.
 - `partials`: harmonic amplitudes. The first value is the fundamental, the
-  second is harmonic 2, and so on. This would be additive synthesis.
+  second is harmonic 2, and so on. This is additive synthesis.
 - `filter`: tonal shaping after the source is generated.
+- `filter.highpass`: low-frequency cutoff in Hz. Useful for removing mud.
 - `filter.lowpass`: high-frequency cutoff in Hz. Lower values sound warmer and
-  less harsh.
+  less harsh. It should be higher than `highpass` when both are used.
 - `noise`: small non-pitched component for breath, bow, or attack texture.
 - `envelope`: attack, decay, sustain, and release shape.
-- `vibrato`: periodic pitch movement. `depth: 0` means no vibrato.
-
-`mix` and `partials` should be mutually exclusive in one `timbre` object. If
-both are present, the importer should either reject the object or choose a
-documented priority.
+- `vibrato`: periodic pitch movement in semitones. `depth: 0` means no vibrato.
 
 ## What Makes A Tone Good For The Ear
 
@@ -225,5 +238,6 @@ minimum could be:
 - `vibrato.depth: 0`, because the target is baroque violin without vibrato.
 
 The hardest part is that real violin timbre changes over time during the bow
-attack, sustain, and release. The future `envelope` and `partials` may need to
-become time-varying to get closer than an organ-like approximation.
+attack, sustain, and release. The current `envelope` and `partials` are static;
+future versions may need time-varying partials or filters to get closer than an
+organ-like approximation.

@@ -12,6 +12,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <cmath>
+#include <algorithm>
 
 #include "sigen.h"
 
@@ -39,6 +40,38 @@ mix_t make_mix(float sine, float square, float triangle, float saw) {
     return {sine, square, triangle, saw};
 }
 
+filter_t default_filter() {
+    return {false, 0.0f, false, 0.0f};
+}
+
+envelope_t default_envelope() {
+    return {20.0f, 0.0f, 1.0f, 20.0f};
+}
+
+timbre_t make_mix_timbre(mix_t mix) {
+    return {
+        source_t::mix,
+        mix,
+        {},
+        default_filter(),
+        default_envelope(),
+        0.0f,
+        0.0f,
+    };
+}
+
+timbre_t make_partials_timbre(std::vector<float> partials) {
+    return {
+        source_t::partials,
+        make_mix(0.0f, 0.0f, 0.0f, 0.0f),
+        partials,
+        default_filter(),
+        default_envelope(),
+        0.0f,
+        0.0f,
+    };
+}
+
 mix_t preset_mix(const std::string &name) {
     if (name == "sine") {
         return make_mix(1.0f, 0.0f, 0.0f, 0.0f);
@@ -56,6 +89,10 @@ mix_t rest_mix() {
     return make_mix(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
+timbre_t rest_timbre() {
+    return make_mix_timbre(rest_mix());
+}
+
 std::string lower_token(std::string token) {
     for (auto &c: token) {
         c = std::tolower(static_cast<unsigned char>(c));
@@ -69,6 +106,16 @@ bool strip_trailing_colon(std::string &token) {
         return true;
     }
     return false;
+}
+
+std::string clean_header_token(std::string token) {
+    token = lower_token(token);
+    strip_trailing_colon(token);
+    return token;
+}
+
+bool token_ends_header(const std::string &token) {
+    return !token.empty() && token.back() == ':';
 }
 
 float parse_mix_weight(std::string token) {
@@ -88,6 +135,62 @@ float parse_mix_weight(std::string token) {
         return 1.0f;
     }
     return value;
+}
+
+float parse_float(std::string token, float fallback = 0.0f) {
+    strip_trailing_colon(token);
+    char *end = nullptr;
+    float value = std::strtof(token.c_str(), &end);
+    if (end == token.c_str() || !std::isfinite(value)) {
+        return fallback;
+    }
+    return value;
+}
+
+float parse_unit_float(const std::string &token, float fallback = 0.0f) {
+    return std::clamp(parse_float(token, fallback), 0.0f, 1.0f);
+}
+
+bool is_timbre_option(const std::string &token) {
+    std::string clean = clean_header_token(token);
+    return clean == "highpass" || clean == "lowpass" || clean == "noise" ||
+           clean == "envelope" || clean == "vibrato";
+}
+
+std::size_t parse_timbre_options(
+    const std::vector<std::string> &tokens,
+    std::size_t index,
+    timbre_t &timbre
+) {
+    for (std::size_t i = index; i < tokens.size(); ++i) {
+        std::string key = clean_header_token(tokens[i]);
+        if (key == "highpass" && i + 1 < tokens.size()) {
+            timbre.filter.highpass = std::max(0.0f, parse_float(tokens[i + 1]));
+            timbre.filter.highpass_enabled = timbre.filter.highpass > 0.0f;
+            i += 1;
+        } else if (key == "lowpass" && i + 1 < tokens.size()) {
+            timbre.filter.lowpass = std::max(0.0f, parse_float(tokens[i + 1]));
+            timbre.filter.lowpass_enabled = timbre.filter.lowpass > 0.0f;
+            i += 1;
+        } else if (key == "noise" && i + 1 < tokens.size()) {
+            timbre.noise = parse_unit_float(tokens[i + 1]);
+            i += 1;
+        } else if (key == "envelope" && i + 4 < tokens.size()) {
+            timbre.envelope.attack_ms = std::max(0.0f, parse_float(tokens[i + 1]));
+            timbre.envelope.decay_ms = std::max(0.0f, parse_float(tokens[i + 2]));
+            timbre.envelope.sustain = parse_unit_float(tokens[i + 3], 1.0f);
+            timbre.envelope.release_ms = std::max(0.0f, parse_float(tokens[i + 4]));
+            i += 4;
+        } else if (key == "vibrato" && i + 1 < tokens.size()) {
+            timbre.vibrato = std::clamp(parse_float(tokens[i + 1]), 0.0f, 2.0f);
+            i += 1;
+        }
+
+        if (token_ends_header(tokens[i])) {
+            return i;
+        }
+    }
+    return tokens.empty() ? 0 : tokens.size() - 1;
 }
 
 void push_stave_if_needed(score_t &score, std::vector<note_t> &stave) {
@@ -116,7 +219,7 @@ score_t parse(std::string str_in) {
         }
     }
 
-    mix_t m = rest_mix();
+    timbre_t t = rest_timbre();
     int l = 0;
     std::string n;
     int o = 4;
@@ -126,20 +229,48 @@ score_t parse(std::string str_in) {
         std::string header = lower_token(token);
         // instrument headers
         if (header == "mix" && i + 4 < tokens.size()) {
-            m = make_mix(
-                parse_mix_weight(tokens[i + 1]),
-                parse_mix_weight(tokens[i + 2]),
-                parse_mix_weight(tokens[i + 3]),
-                parse_mix_weight(tokens[i + 4])
+            t = make_mix_timbre(
+                make_mix(
+                    parse_mix_weight(tokens[i + 1]),
+                    parse_mix_weight(tokens[i + 2]),
+                    parse_mix_weight(tokens[i + 3]),
+                    parse_mix_weight(tokens[i + 4])
+                )
             );
             push_stave_if_needed(score, stave);
-            i += 4;
+            if (token_ends_header(tokens[i + 4])) {
+                i += 4;
+            } else {
+                i = parse_timbre_options(tokens, i + 5, t);
+            }
+        } else if (header == "partials" && i + 1 < tokens.size()) {
+            std::vector<float> partials;
+            std::size_t j = i + 1;
+            for (; j < tokens.size(); ++j) {
+                if (is_timbre_option(tokens[j])) {
+                    break;
+                }
+                partials.push_back(parse_unit_float(tokens[j]));
+                if (token_ends_header(tokens[j])) {
+                    break;
+                }
+            }
+            if (partials.empty()) {
+                partials.push_back(1.0f);
+            }
+            t = make_partials_timbre(partials);
+            push_stave_if_needed(score, stave);
+            if (j < tokens.size() && token_ends_header(tokens[j])) {
+                i = j;
+            } else {
+                i = parse_timbre_options(tokens, j, t);
+            }
         } else if (header.back() == ':') {
             strip_trailing_colon(header);
             if (header == "sine" || header == "square" ||
                 header == "triangle" || header == "saw" ||
                 header == "sawtooth") {
-                m = preset_mix(header);
+                t = make_mix_timbre(preset_mix(header));
                 push_stave_if_needed(score, stave);
             }
         // notes
@@ -157,9 +288,9 @@ score_t parse(std::string str_in) {
 
                 // rests
                 if (n == "R") {
-                    stave.push_back({rest_mix(), l, n, o});
+                    stave.push_back({rest_timbre(), l, n, o});
                 } else {
-                    stave.push_back({m, l, n, o});
+                    stave.push_back({t, l, n, o});
                 }
             }
         }
@@ -287,8 +418,7 @@ int playscore(int argc, char **argv) {
         ptr = 0;
     }
 
-    // apply a low pass filter
-    pcm_out = lowpass(pcm_data);
+    pcm_out = pcm_data;
 
     // TODO: change all pcm_data before this point to be float/doubles
     for (const auto &sample: pcm_out) {

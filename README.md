@@ -53,8 +53,8 @@ offset applied at render time.
 
 `timbre` can be a simple preset name such as `sine`, `square`, `triangle`,
 `saw`, `soft organ`, `bright organ`, `reed organ`, `mellow organ`,
-`string organ`, or `warm synth organ`. For custom timbre, use a mix of the four
-base waves:
+`string organ`, or `warm synth organ`. For custom timbre, use either a mix of
+the four base waves or additive partials:
 
 ```json
 {
@@ -72,11 +72,36 @@ base waves:
 }
 ```
 
+```json
+{
+  "name": "lead",
+  "timbre": {
+    "preset": "custom",
+    "partials": [1.0, 0.55, 0.35, 0.25],
+    "filter": {
+      "highpass": 120,
+      "lowpass": 4500
+    },
+    "noise": 0.02,
+    "envelope": {
+      "attack_ms": 25,
+      "decay_ms": 60,
+      "sustain": 0.9,
+      "release_ms": 120
+    },
+    "vibrato": {
+      "depth": 0
+    }
+  },
+  "score": ["2c4 d e f | 4g r"]
+}
+```
+
 See [docs/json-score-format.md](docs/json-score-format.md) for the full JSON
 schema, note syntax, barline convention, and AI generation prompt guidance. See
 [docs/timbre.md](docs/timbre.md) for the current mix-based timbre format, mix
-visualization, and future `partials`, `filter`, `noise`, `envelope`, and
-`vibrato` ideas.
+and partials timbre format, filter visualization, `noise`, `envelope`, and
+`vibrato`.
 
 JSON is the project format because it is explicit, easy to validate, and maps
 directly to the web UI. It is also a better target for AI-generated music:
@@ -124,13 +149,14 @@ Architecture of audio engine
 │                 │        │ │     │                    │
 │                 ▼        │ │     │                    │
 │                          │ │     │                    │
-│ filter()     A/R filter  │ │     │                    │
+│ envelope_    ADSR-style  │ │     │                    │
+│ gain()       envelope    │ │     │                    │
 │                          │ │     │                    │
 │                 │        │ │     │                    │
 │                 ▼        │ │     ▼                    │
 │                          │ │                          │
-│ lowpass()    Low pass  ──┼─┼─► Write                  │
-│              filter      │ │   notes                  │
+│ highpass/    Optional  ──┼─┼─► Write                  │
+│ lowpass      filters     │ │   notes                  │
 │                          │ │                          │
 └──────────────────────────┘ │     │                    │
                              │     ▼                    │

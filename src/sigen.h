@@ -35,6 +35,35 @@ struct mix_t {
     float saw;
 };
 
+struct filter_t {
+    bool highpass_enabled;
+    float highpass;
+    bool lowpass_enabled;
+    float lowpass;
+};
+
+struct envelope_t {
+    float attack_ms;
+    float decay_ms;
+    float sustain;
+    float release_ms;
+};
+
+enum class source_t {
+    mix,
+    partials,
+};
+
+struct timbre_t {
+    source_t source;
+    mix_t mix;
+    std::vector<float> partials;
+    filter_t filter;
+    envelope_t envelope;
+    float noise;
+    float vibrato;
+};
+
 typedef std::unordered_map<std::string, float> f_lut_t;
 
 class note_t {
@@ -43,26 +72,27 @@ private:
     static f_lut_t construct_lut();
 
 public:
-    mix_t        mix;
+    timbre_t     timbre;
     int          length;
     std::string  name;
     int          octave;
     float        freq;
 
-    note_t(mix_t m, int l, std::string n, int o);
+    note_t(timbre_t t, int l, std::string n, int o);
 };
 
 #ifdef DEBUG
 std::ostream &operator<<(std::ostream &os, mix_t mix);
+std::ostream &operator<<(std::ostream &os, timbre_t const &timbre);
 std::ostream &operator<<(std::ostream &os, note_t const &note);
 std::ostream &operator<<(std::ostream &os, std::vector<note_t> const &stave);
 std::ostream &operator<<(std::ostream &os, std::vector<std::vector<note_t>> const &score);
 #endif
 
 std::vector<int16_t> lowpass(std::vector<int16_t> &pcm_data);
-float filter(int i, int s_len);
+float envelope_gain(int i, int s_len, envelope_t envelope);
 void play(std::vector<int16_t> &pcm_data, int &ptr, note_t note, bool first);
-void play(std::vector<int16_t> &pcm_data, int &ptr, mix_t mix, int length,
+void play(std::vector<int16_t> &pcm_data, int &ptr, timbre_t timbre, int length,
           float freq, bool first);
 
 #endif

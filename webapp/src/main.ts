@@ -20,10 +20,33 @@ type MixWeights = {
   saw: number;
 };
 
-type Timbre = TimbrePreset | {
-  preset: "custom";
-  mix: MixWeights;
+type TimbreSource = "mix" | "partials";
+
+type FilterSettings = {
+  highpass?: number;
+  lowpass?: number;
 };
+
+type EnvelopeSettings = {
+  attack_ms: number;
+  decay_ms: number;
+  sustain: number;
+  release_ms: number;
+};
+
+type TimbreObject = {
+  preset: TimbrePreset;
+  mix?: MixWeights;
+  partials?: number[];
+  filter?: FilterSettings;
+  noise?: number;
+  envelope?: EnvelopeSettings;
+  vibrato?: {
+    depth: number;
+  };
+};
+
+type Timbre = TimbrePreset | TimbreObject;
 
 interface PartPayload {
   name: string;
@@ -90,8 +113,20 @@ type ElementRef = {
   timbre: HTMLSelectElement;
   mixPanel: HTMLElement;
   mixDetails: HTMLDetailsElement;
+  sourceInputs: Record<TimbreSource, HTMLInputElement>;
   mixInputs: Record<keyof MixWeights, HTMLInputElement>;
   mixText: HTMLInputElement;
+  partialsText: HTMLInputElement;
+  highpassValue: HTMLInputElement;
+  lowpassValue: HTMLInputElement;
+  advancedEnabled: HTMLInputElement;
+  advancedPanel: HTMLElement;
+  attackValue: HTMLInputElement;
+  decayValue: HTMLInputElement;
+  sustainValue: HTMLInputElement;
+  releaseValue: HTMLInputElement;
+  vibratoValue: HTMLInputElement;
+  noiseValue: HTMLInputElement;
   timbreCanvas: HTMLCanvasElement;
   spectrumCanvas: HTMLCanvasElement;
   score: HTMLTextAreaElement;
@@ -111,6 +146,14 @@ const timbrePresets: TimbrePreset[] = [
   "custom",
 ];
 const mixKeys: Array<keyof MixWeights> = ["sine", "square", "triangle", "saw"];
+const defaultPartials = [1, 0.45, 0.3, 0.18, 0.12, 0.08, 0.05];
+const defaultEnvelope: EnvelopeSettings = {
+  attack_ms: 20,
+  decay_ms: 0,
+  sustain: 1,
+  release_ms: 20,
+};
+const referencePlotFrequency = 440;
 const presetMixes: Record<TimbrePreset, MixWeights> = {
   sine: { sine: 1, square: 0, triangle: 0, saw: 0 },
   square: { sine: 0, square: 1, triangle: 0, saw: 0 },
@@ -346,6 +389,12 @@ function clampUnit(value: number): number {
   return value;
 }
 
+function clampPositive(value: number, maximum = 96000): number {
+  if (!Number.isFinite(value) || value < 0) return 0;
+  if (value > maximum) return maximum;
+  return value;
+}
+
 function normalizePreset(value: unknown): TimbrePreset {
   const normalized = String(value || "triangle")
     .trim()
@@ -358,6 +407,18 @@ function normalizePreset(value: unknown): TimbrePreset {
     return normalized as TimbrePreset;
   }
   return "triangle";
+}
+
+function normalizePartials(value: unknown): number[] {
+  if (Array.isArray(value)) {
+    const partials = value
+      .slice(0, 32)
+      .map((partial) => clampUnit(Number(partial)));
+    if (partials.some((partial) => partial > 0)) {
+      return partials;
+    }
+  }
+  return [...defaultPartials];
 }
 
 function normalizeMix(value: unknown, fallback: MixWeights): MixWeights {
@@ -380,17 +441,94 @@ function normalizeMix(value: unknown, fallback: MixWeights): MixWeights {
   return { ...fallback };
 }
 
-function timbreState(value: unknown): { preset: TimbrePreset; mix: MixWeights } {
+function normalizeFilter(value: unknown): FilterSettings {
+  if (!isRecord(value)) {
+    return {};
+  }
+  const highpass = clampPositive(Number(value.highpass));
+  const lowpass = clampPositive(Number(value.lowpass));
+  const filter: FilterSettings = {};
+  if (highpass > 0) {
+    filter.highpass = highpass;
+  }
+  if (lowpass > 0 && lowpass > highpass) {
+    filter.lowpass = lowpass;
+  }
+  return filter;
+}
+
+function normalizeEnvelope(value: unknown): EnvelopeSettings {
+  if (!isRecord(value)) {
+    return { ...defaultEnvelope };
+  }
+  return {
+    attack_ms: clampPositive(Number(value.attack_ms ?? defaultEnvelope.attack_ms), 5000),
+    decay_ms: clampPositive(Number(value.decay_ms ?? defaultEnvelope.decay_ms), 5000),
+    sustain: clampUnit(Number(value.sustain ?? defaultEnvelope.sustain)),
+    release_ms: clampPositive(Number(value.release_ms ?? defaultEnvelope.release_ms), 5000),
+  };
+}
+
+function normalizeVibrato(value: unknown): number {
+  if (isRecord(value)) {
+    return clampPositive(Number(value.depth), 2);
+  }
+  return clampPositive(Number(value), 2);
+}
+
+function parsePartialsText(value: string, fallback = defaultPartials): number[] {
+  const partials = value
+    .split(/[,\s]+/)
+    .filter(Boolean)
+    .slice(0, 32)
+    .map((part) => clampUnit(Number(part)));
+  return partials.some((partial) => partial > 0) ? partials : [...fallback];
+}
+
+type TimbreUiState = {
+  preset: TimbrePreset;
+  source: TimbreSource;
+  mix: MixWeights;
+  partials: number[];
+  filter: FilterSettings;
+  advanced: boolean;
+  envelope: EnvelopeSettings;
+  vibratoDepth: number;
+  noise: number;
+};
+
+function timbreState(value: unknown): TimbreUiState {
   if (isRecord(value)) {
     const preset = normalizePreset(value.preset);
     const fallback = preset === "custom" ? presetMixes.custom : presetMixes[preset];
+    const source = "partials" in value ? "partials" : "mix";
+    const noise = clampUnit(Number(value.noise ?? 0));
+    const envelope = normalizeEnvelope(value.envelope);
+    const vibratoDepth = normalizeVibrato(value.vibrato);
     return {
       preset,
+      source,
       mix: normalizeMix(value.mix, fallback),
+      partials: normalizePartials(value.partials),
+      filter: normalizeFilter(value.filter),
+      advanced: "envelope" in value || "vibrato" in value || "noise" in value,
+      envelope,
+      vibratoDepth,
+      noise,
     };
   }
   const preset = normalizePreset(value);
-  return { preset, mix: { ...presetMixes[preset] } };
+  return {
+    preset,
+    source: "mix",
+    mix: { ...presetMixes[preset] },
+    partials: [...defaultPartials],
+    filter: {},
+    advanced: false,
+    envelope: { ...defaultEnvelope },
+    vibratoDepth: 0,
+    noise: 0,
+  };
 }
 
 function mixFromInputs(ref: ElementRef): MixWeights {
@@ -402,12 +540,90 @@ function mixFromInputs(ref: ElementRef): MixWeights {
   };
 }
 
+function partialsFromInput(ref: ElementRef): number[] {
+  return parsePartialsText(ref.partialsText.value);
+}
+
+function filterFromInputs(ref: ElementRef): FilterSettings {
+  const highpass = clampPositive(Number(ref.highpassValue.value));
+  const rawLowpass = ref.lowpassValue.value.trim();
+  const lowpass = rawLowpass ? clampPositive(Number(rawLowpass)) : 0;
+  const filter: FilterSettings = {};
+  if (highpass > 0) {
+    filter.highpass = highpass;
+  }
+  if (lowpass > 0 && lowpass > highpass) {
+    filter.lowpass = lowpass;
+  }
+  return filter;
+}
+
+function envelopeFromInputs(ref: ElementRef): EnvelopeSettings {
+  return {
+    attack_ms: clampPositive(Number(ref.attackValue.value), 5000),
+    decay_ms: clampPositive(Number(ref.decayValue.value), 5000),
+    sustain: clampUnit(Number(ref.sustainValue.value)),
+    release_ms: clampPositive(Number(ref.releaseValue.value), 5000),
+  };
+}
+
+function timbreSource(ref: ElementRef): TimbreSource {
+  return ref.sourceInputs.partials.checked ? "partials" : "mix";
+}
+
 function timbrePayload(ref: ElementRef): Timbre {
   const preset = normalizePreset(ref.timbre.value);
-  if (preset === "custom") {
-    return { preset: "custom", mix: mixFromInputs(ref) };
+  const source = timbreSource(ref);
+  const filter = filterFromInputs(ref);
+  const hasFilter = filter.highpass !== undefined || filter.lowpass !== undefined;
+  const timbre: TimbreObject = { preset };
+
+  if (source === "partials") {
+    timbre.preset = "custom";
+    timbre.partials = partialsFromInput(ref);
+  } else if (preset === "custom") {
+    timbre.mix = mixFromInputs(ref);
+  }
+
+  if (hasFilter) {
+    timbre.filter = filter;
+  }
+
+  if (ref.advancedEnabled.checked) {
+    timbre.envelope = envelopeFromInputs(ref);
+    timbre.noise = clampUnit(Number(ref.noiseValue.value));
+    timbre.vibrato = {
+      depth: clampPositive(Number(ref.vibratoValue.value), 2),
+    };
+  }
+
+  if (Object.keys(timbre).length > 1 || preset === "custom") {
+    return timbre;
   }
   return preset;
+}
+
+function timbrePayloadFromState(state: TimbreUiState): Timbre {
+  const hasFilter = state.filter.highpass !== undefined || state.filter.lowpass !== undefined;
+  const timbre: TimbreObject = { preset: state.preset };
+  if (state.source === "partials") {
+    timbre.preset = "custom";
+    timbre.partials = state.partials;
+  } else if (state.preset === "custom") {
+    timbre.mix = state.mix;
+  }
+  if (hasFilter) {
+    timbre.filter = state.filter;
+  }
+  if (state.advanced) {
+    timbre.envelope = state.envelope;
+    timbre.noise = state.noise;
+    timbre.vibrato = { depth: state.vibratoDepth };
+  }
+  if (Object.keys(timbre).length > 1 || state.preset === "custom") {
+    return timbre;
+  }
+  return state.preset;
 }
 
 function mixedWaveSample(phase: number, mix: MixWeights): number {
@@ -428,6 +644,75 @@ function mixedWaveSample(phase: number, mix: MixWeights): number {
   );
 }
 
+function partialsWaveSample(phase: number, partials: number[]): number {
+  const total = partials.reduce((sum, partial) => sum + partial, 0);
+  if (total <= 0) return 0;
+  return partials.reduce(
+    (sample, partial, index) =>
+      sample + (partial / total) * Math.sin(2 * Math.PI * (index + 1) * phase),
+    0,
+  );
+}
+
+function currentTimbreState(ref: ElementRef): TimbreUiState {
+  return {
+    preset: normalizePreset(ref.timbre.value),
+    source: timbreSource(ref),
+    mix: mixFromInputs(ref),
+    partials: partialsFromInput(ref),
+    filter: filterFromInputs(ref),
+    advanced: ref.advancedEnabled.checked,
+    envelope: envelopeFromInputs(ref),
+    vibratoDepth: clampPositive(Number(ref.vibratoValue.value), 2),
+    noise: clampUnit(Number(ref.noiseValue.value)),
+  };
+}
+
+function sourceWaveSample(phase: number, state: TimbreUiState): number {
+  return state.source === "partials"
+    ? partialsWaveSample(phase, state.partials)
+    : mixedWaveSample(phase, state.mix);
+}
+
+function filteredWaveSamples(state: TimbreUiState, sampleCount: number): number[] {
+  const totalSamples = sampleCount * 4;
+  const sampleRate = referencePlotFrequency * sampleCount;
+  const dt = 1 / sampleRate;
+  const highpass = state.filter.highpass;
+  const lowpass = state.filter.lowpass;
+  const highpassEnabled = highpass !== undefined && highpass > 0 && highpass < sampleRate / 2;
+  const lowpassEnabled = lowpass !== undefined && lowpass > 0 && lowpass < sampleRate / 2;
+  const hpAlpha = highpassEnabled
+    ? (1 / (2 * Math.PI * highpass)) / ((1 / (2 * Math.PI * highpass)) + dt)
+    : 0;
+  const lpAlpha = lowpassEnabled
+    ? dt / ((1 / (2 * Math.PI * lowpass)) + dt)
+    : 0;
+  let hpPrevIn = 0;
+  let hpPrevOut = 0;
+  let lpPrevOut = 0;
+  const output: number[] = [];
+
+  for (let i = 0; i < totalSamples; i += 1) {
+    const phase = (i % sampleCount) / sampleCount;
+    let sample = sourceWaveSample(phase, state);
+    if (highpassEnabled) {
+      const filtered = hpAlpha * (hpPrevOut + sample - hpPrevIn);
+      hpPrevIn = sample;
+      hpPrevOut = filtered;
+      sample = filtered;
+    }
+    if (lowpassEnabled) {
+      lpPrevOut = lpPrevOut + lpAlpha * (sample - lpPrevOut);
+      sample = lpPrevOut;
+    }
+    if (i >= totalSamples - sampleCount) {
+      output.push(sample);
+    }
+  }
+  return output;
+}
+
 function resizeCanvas(canvas: HTMLCanvasElement) {
   const scale = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
@@ -441,11 +726,12 @@ function resizeCanvas(canvas: HTMLCanvasElement) {
   return { ctx, width, height };
 }
 
-function drawTimbre(canvas: HTMLCanvasElement, mix: MixWeights) {
+function drawTimbre(canvas: HTMLCanvasElement, state: TimbreUiState) {
   const resized = resizeCanvas(canvas);
   if (!resized) return;
   const { ctx, width, height } = resized;
   const mid = height / 2;
+  const samples = filteredWaveSamples(state, Math.max(64, width));
 
   ctx.clearRect(0, 0, width, height);
   ctx.strokeStyle = "#e5e7eb";
@@ -459,8 +745,8 @@ function drawTimbre(canvas: HTMLCanvasElement, mix: MixWeights) {
   ctx.lineWidth = 1.7;
   ctx.beginPath();
   for (let x = 0; x < width; x += 1) {
-    const phase = x / Math.max(1, width - 1);
-    const y = mid - mixedWaveSample(phase, mix) * (height * 0.38);
+    const sample = samples[Math.min(samples.length - 1, x)] ?? 0;
+    const y = mid - sample * (height * 0.38);
     if (x === 0) {
       ctx.moveTo(x, y);
     } else {
@@ -470,17 +756,18 @@ function drawTimbre(canvas: HTMLCanvasElement, mix: MixWeights) {
   ctx.stroke();
 }
 
-function spectrumValues(mix: MixWeights): number[] {
+function spectrumValues(state: TimbreUiState): number[] {
   const sampleCount = 256;
   const harmonicCount = 16;
   const values: number[] = [];
+  const samples = filteredWaveSamples(state, sampleCount);
 
   for (let harmonic = 1; harmonic <= harmonicCount; harmonic += 1) {
     let real = 0;
     let imag = 0;
     for (let i = 0; i < sampleCount; i += 1) {
       const phase = i / sampleCount;
-      const sample = mixedWaveSample(phase, mix);
+      const sample = samples[i] ?? sourceWaveSample(phase, state);
       const angle = -2 * Math.PI * harmonic * phase;
       real += sample * Math.cos(angle);
       imag += sample * Math.sin(angle);
@@ -492,11 +779,11 @@ function spectrumValues(mix: MixWeights): number[] {
   return values.map((value) => value / max);
 }
 
-function drawSpectrum(canvas: HTMLCanvasElement, mix: MixWeights) {
+function drawSpectrum(canvas: HTMLCanvasElement, state: TimbreUiState) {
   const resized = resizeCanvas(canvas);
   if (!resized) return;
   const { ctx, width, height } = resized;
-  const values = spectrumValues(mix);
+  const values = spectrumValues(state);
   const gap = 3;
   const barWidth = Math.max(4, (width - gap * (values.length - 1)) / values.length);
 
@@ -518,10 +805,11 @@ function drawSpectrum(canvas: HTMLCanvasElement, mix: MixWeights) {
 }
 
 function updateTimbreVisuals(ref: ElementRef) {
-  const mix = mixFromInputs(ref);
-  ref.mixText.value = mixKeys.map((key) => mix[key]).join(", ");
-  drawTimbre(ref.timbreCanvas, mix);
-  drawSpectrum(ref.spectrumCanvas, mix);
+  const state = currentTimbreState(ref);
+  ref.mixText.value = mixKeys.map((key) => state.mix[key]).join(", ");
+  ref.partialsText.value = state.partials.join(", ");
+  drawTimbre(ref.timbreCanvas, state);
+  drawSpectrum(ref.spectrumCanvas, state);
 }
 
 function setCustomMix(ref: ElementRef, mix: MixWeights) {
@@ -529,6 +817,73 @@ function setCustomMix(ref: ElementRef, mix: MixWeights) {
     ref.mixInputs[key].value = String(mix[key]);
   });
   updateTimbreVisuals(ref);
+}
+
+function setPartials(ref: ElementRef, partials: number[]) {
+  ref.partialsText.value = partials.join(", ");
+  updateTimbreVisuals(ref);
+}
+
+function setFilterControls(ref: ElementRef, filter: FilterSettings) {
+  ref.highpassValue.value = String(filter.highpass ?? 0);
+  ref.lowpassValue.value = filter.lowpass === undefined ? "" : String(filter.lowpass);
+  syncFilterControls(ref);
+}
+
+function setAdvancedControls(ref: ElementRef, state: TimbreUiState) {
+  ref.advancedEnabled.checked = state.advanced;
+  ref.attackValue.value = String(state.envelope.attack_ms);
+  ref.decayValue.value = String(state.envelope.decay_ms);
+  ref.sustainValue.value = String(state.envelope.sustain);
+  ref.releaseValue.value = String(state.envelope.release_ms);
+  ref.vibratoValue.value = String(state.vibratoDepth);
+  ref.noiseValue.value = String(state.noise);
+  syncAdvancedControls(ref);
+}
+
+function syncSourceControls(ref: ElementRef) {
+  const source = timbreSource(ref);
+  const mixDisabled = source !== "mix";
+  const partialsDisabled = source !== "partials";
+  ref.mixText.disabled = mixDisabled;
+  mixKeys.forEach((key) => {
+    ref.mixInputs[key].disabled = mixDisabled;
+  });
+  ref.partialsText.disabled = partialsDisabled;
+  ref.mixPanel.classList.toggle("source-partials", source === "partials");
+  ref.mixPanel.classList.toggle("source-mix", source === "mix");
+  updateTimbreVisuals(ref);
+}
+
+function syncFilterControls(ref: ElementRef) {
+  const highpass = clampPositive(Number(ref.highpassValue.value));
+  ref.lowpassValue.min = String(highpass + 1);
+  updateTimbreVisuals(ref);
+}
+
+function syncAdvancedControls(ref: ElementRef) {
+  const enabled = ref.advancedEnabled.checked;
+  ref.advancedPanel.classList.toggle("is-disabled", !enabled);
+  [
+    ref.attackValue,
+    ref.decayValue,
+    ref.sustainValue,
+    ref.releaseValue,
+    ref.vibratoValue,
+    ref.noiseValue,
+  ].forEach((input) => {
+    input.disabled = !enabled;
+  });
+}
+
+function setTimbreControls(ref: ElementRef, state: TimbreUiState) {
+  ref.timbre.value = state.preset;
+  ref.sourceInputs[state.source].checked = true;
+  setCustomMix(ref, state.mix);
+  setPartials(ref, state.partials);
+  setFilterControls(ref, state.filter);
+  setAdvancedControls(ref, state);
+  syncSourceControls(ref);
 }
 
 function setMixDetailsOpen(ref: ElementRef, open: boolean) {
@@ -576,8 +931,10 @@ function normalizeProject(
       typeof rawPart.name === "string" && rawPart.name.trim()
         ? rawPart.name.trim()
         : `part ${index + 1}`;
-    const { preset, mix } = timbreState(rawPart.timbre);
-    const timbre: Timbre = preset === "custom" ? { preset, mix } : preset;
+    const state = timbreState(rawPart.timbre);
+    const timbre = isRecord(rawPart.timbre)
+      ? timbrePayloadFromState(state)
+      : state.preset;
     parts.push({ name, timbre, score: scoreText(rawPart.score) });
   }
 
@@ -610,11 +967,10 @@ function applyProject(project: Omit<ScorePayload, "filename">) {
   }
   normalized.slice(0, partRefs.length).forEach((part, index) => {
     const ref = partRefs[index];
-    const { preset, mix } = timbreState(part.timbre);
+    const state = timbreState(part.timbre);
     ref.name.value = part.name || `part ${index + 1}`;
-    ref.timbre.value = preset;
-    setCustomMix(ref, mix);
-    setMixDetailsOpen(ref, preset === "custom");
+    setTimbreControls(ref, state);
+    setMixDetailsOpen(ref, state.preset === "custom" || state.source === "partials");
     ref.score.value = part.score || "";
   });
 }
@@ -830,6 +1186,32 @@ function renderPartInputs() {
     const mixPanel = document.createElement("div");
     mixPanel.className = "custom-mix";
 
+    const sourceInputs = {} as Record<TimbreSource, HTMLInputElement>;
+    const mixDetails = document.createElement("details");
+    mixDetails.className = "mix-details";
+    const mixSummary = document.createElement("summary");
+    mixSummary.textContent = "timbre";
+    mixDetails.appendChild(mixSummary);
+
+    const mixRow = document.createElement("label");
+    mixRow.className = "source-row mix-values-row";
+    const mixRadio = document.createElement("input");
+    mixRadio.type = "radio";
+    mixRadio.name = `timbre-source-${i}`;
+    mixRadio.value = "mix";
+    mixRadio.checked = true;
+    sourceInputs.mix = mixRadio;
+    const mixTextLabel = document.createElement("span");
+    mixTextLabel.textContent = "mix";
+    const mixText = document.createElement("input");
+    mixText.className = "mix-values";
+    mixText.value = mixKeys.map((key) => presetMixes.triangle[key]).join(", ");
+    mixText.placeholder = "sine, square, triangle, saw";
+    mixRow.appendChild(mixRadio);
+    mixRow.appendChild(mixTextLabel);
+    mixRow.appendChild(mixText);
+    mixDetails.appendChild(mixRow);
+
     const mixInputs = {} as Record<keyof MixWeights, HTMLInputElement>;
     const mixSliderGroup = document.createElement("div");
     mixSliderGroup.className = "mix-sliders";
@@ -847,40 +1229,119 @@ function renderPartInputs() {
       input.addEventListener("input", () => {
         const ref = partRefs[i];
         ref.timbre.value = "custom";
+        ref.sourceInputs.mix.checked = true;
         setCustomMix(ref, mixFromInputs(ref));
+        syncSourceControls(ref);
       });
       label.appendChild(text);
       label.appendChild(input);
       mixSliderGroup.appendChild(label);
       mixInputs[key] = input;
     });
+    mixDetails.appendChild(mixSliderGroup);
 
-    const mixRow = document.createElement("label");
-    mixRow.className = "mix-values-row";
-    const mixTextLabel = document.createElement("span");
-    mixTextLabel.textContent = "mix";
-    const mixText = document.createElement("input");
-    mixText.className = "mix-values";
-    mixText.value = mixKeys.map((key) => presetMixes.triangle[key]).join(", ");
-    mixText.placeholder = "sine, square, triangle, saw";
     mixText.addEventListener("change", () => {
       const ref = partRefs[i];
       ref.timbre.value = "custom";
+      ref.sourceInputs.mix.checked = true;
       setCustomMix(
         ref,
         parseCustomMixText(mixText.value, mixFromInputs(ref)),
       );
+      syncSourceControls(ref);
     });
-    mixRow.appendChild(mixTextLabel);
-    mixRow.appendChild(mixText);
 
-    const mixDetails = document.createElement("details");
-    mixDetails.className = "mix-details";
-    const mixSummary = document.createElement("summary");
-    mixSummary.textContent = "waveform";
-    mixDetails.appendChild(mixSummary);
-    mixDetails.appendChild(mixRow);
-    mixDetails.appendChild(mixSliderGroup);
+    const partialsRow = document.createElement("label");
+    partialsRow.className = "source-row partials-row";
+    const partialsRadio = document.createElement("input");
+    partialsRadio.type = "radio";
+    partialsRadio.name = `timbre-source-${i}`;
+    partialsRadio.value = "partials";
+    sourceInputs.partials = partialsRadio;
+    const partialsLabel = document.createElement("span");
+    partialsLabel.textContent = "partials";
+    const partialsText = document.createElement("input");
+    partialsText.className = "partials-values";
+    partialsText.value = defaultPartials.join(", ");
+    partialsText.placeholder = "1, 0.45, 0.3, 0.18";
+    partialsRow.appendChild(partialsRadio);
+    partialsRow.appendChild(partialsLabel);
+    partialsRow.appendChild(partialsText);
+    mixDetails.appendChild(partialsRow);
+
+    [mixRadio, partialsRadio].forEach((radio) => {
+      radio.addEventListener("change", () => {
+        const ref = partRefs[i];
+        if (ref.sourceInputs.partials.checked) {
+          ref.timbre.value = "custom";
+        }
+        syncSourceControls(ref);
+      });
+    });
+
+    partialsText.addEventListener("change", () => {
+      const ref = partRefs[i];
+      ref.timbre.value = "custom";
+      ref.sourceInputs.partials.checked = true;
+      setPartials(ref, parsePartialsText(partialsText.value));
+      syncSourceControls(ref);
+    });
+
+    const highpassRow = document.createElement("label");
+    highpassRow.className = "filter-row";
+    const highpassLabel = document.createElement("span");
+    highpassLabel.textContent = "highpass";
+    const highpassValue = document.createElement("input");
+    highpassValue.type = "number";
+    highpassValue.min = "0";
+    highpassValue.max = "96000";
+    highpassValue.step = "1";
+    highpassValue.value = "0";
+    const highpassReset = document.createElement("button");
+    highpassReset.type = "button";
+    highpassReset.textContent = "reset";
+    highpassRow.appendChild(highpassLabel);
+    highpassRow.appendChild(highpassValue);
+    highpassRow.appendChild(highpassReset);
+    mixDetails.appendChild(highpassRow);
+
+    const lowpassRow = document.createElement("label");
+    lowpassRow.className = "filter-row";
+    const lowpassLabel = document.createElement("span");
+    lowpassLabel.textContent = "lowpass";
+    const lowpassValue = document.createElement("input");
+    lowpassValue.type = "number";
+    lowpassValue.min = "1";
+    lowpassValue.max = "96000";
+    lowpassValue.step = "1";
+    lowpassValue.value = "";
+    const lowpassReset = document.createElement("button");
+    lowpassReset.type = "button";
+    lowpassReset.textContent = "reset";
+    lowpassRow.appendChild(lowpassLabel);
+    lowpassRow.appendChild(lowpassValue);
+    lowpassRow.appendChild(lowpassReset);
+    mixDetails.appendChild(lowpassRow);
+
+    highpassReset.addEventListener("click", () => {
+      const ref = partRefs[i];
+      ref.highpassValue.value = "0";
+      syncFilterControls(ref);
+    });
+    lowpassReset.addEventListener("click", () => {
+      const ref = partRefs[i];
+      ref.lowpassValue.value = "";
+      syncFilterControls(ref);
+    });
+
+    [highpassValue, lowpassValue].forEach((input) => {
+      input.addEventListener("input", () => {
+        syncFilterControls(partRefs[i]);
+      });
+      input.addEventListener("change", () => {
+        syncFilterControls(partRefs[i]);
+      });
+    });
 
     const plotGrid = document.createElement("div");
     plotGrid.className = "timbre-plots";
@@ -904,6 +1365,79 @@ function renderPartInputs() {
     plotGrid.appendChild(wavePlot);
     plotGrid.appendChild(spectrumPlot);
     mixDetails.appendChild(plotGrid);
+
+    const advancedToggle = document.createElement("label");
+    advancedToggle.className = "advanced-toggle";
+    const advancedEnabled = document.createElement("input");
+    advancedEnabled.type = "checkbox";
+    const advancedText = document.createElement("span");
+    advancedText.textContent = "Advanced settings";
+    advancedToggle.appendChild(advancedEnabled);
+    advancedToggle.appendChild(advancedText);
+    mixDetails.appendChild(advancedToggle);
+
+    const advancedPanel = document.createElement("div");
+    advancedPanel.className = "advanced-panel";
+
+    const attackValue = document.createElement("input");
+    attackValue.type = "number";
+    attackValue.min = "0";
+    attackValue.max = "5000";
+    attackValue.step = "1";
+    attackValue.value = String(defaultEnvelope.attack_ms);
+    const decayValue = document.createElement("input");
+    decayValue.type = "number";
+    decayValue.min = "0";
+    decayValue.max = "5000";
+    decayValue.step = "1";
+    decayValue.value = String(defaultEnvelope.decay_ms);
+    const sustainValue = document.createElement("input");
+    sustainValue.type = "number";
+    sustainValue.min = "0";
+    sustainValue.max = "1";
+    sustainValue.step = "0.01";
+    sustainValue.value = String(defaultEnvelope.sustain);
+    const releaseValue = document.createElement("input");
+    releaseValue.type = "number";
+    releaseValue.min = "0";
+    releaseValue.max = "5000";
+    releaseValue.step = "1";
+    releaseValue.value = String(defaultEnvelope.release_ms);
+    const vibratoValue = document.createElement("input");
+    vibratoValue.type = "number";
+    vibratoValue.min = "0";
+    vibratoValue.max = "2";
+    vibratoValue.step = "0.01";
+    vibratoValue.value = "0";
+    const noiseValue = document.createElement("input");
+    noiseValue.type = "number";
+    noiseValue.min = "0";
+    noiseValue.max = "1";
+    noiseValue.step = "0.01";
+    noiseValue.value = "0";
+
+    [
+      ["attack/ms", attackValue],
+      ["decay/ms", decayValue],
+      ["sustain", sustainValue],
+      ["release/ms", releaseValue],
+      ["vibrato", vibratoValue],
+      ["noise", noiseValue],
+    ].forEach(([labelText, input]) => {
+      const label = document.createElement("label");
+      label.className = "advanced-row";
+      const span = document.createElement("span");
+      span.textContent = labelText as string;
+      label.appendChild(span);
+      label.appendChild(input as HTMLInputElement);
+      advancedPanel.appendChild(label);
+    });
+
+    advancedEnabled.addEventListener("change", () => {
+      syncAdvancedControls(partRefs[i]);
+    });
+    mixDetails.appendChild(advancedPanel);
+
     mixDetails.addEventListener("toggle", () => {
       if (mixDetails.open) {
         updateTimbreVisuals(partRefs[i]);
@@ -917,7 +1451,9 @@ function renderPartInputs() {
       if (preset === "custom") {
         setMixDetailsOpen(ref, true);
       } else {
+        ref.sourceInputs.mix.checked = true;
         setCustomMix(ref, presetMixes[preset]);
+        syncSourceControls(ref);
       }
     });
 
@@ -957,13 +1493,25 @@ function renderPartInputs() {
       timbre,
       mixPanel,
       mixDetails,
+      sourceInputs,
       mixInputs,
       mixText,
+      partialsText,
+      highpassValue,
+      lowpassValue,
+      advancedEnabled,
+      advancedPanel,
+      attackValue,
+      decayValue,
+      sustainValue,
+      releaseValue,
+      vibratoValue,
+      noiseValue,
       timbreCanvas,
       spectrumCanvas,
       score: textarea,
     });
-    setCustomMix(partRefs[i], presetMixes.triangle);
+    setTimbreControls(partRefs[i], timbreState("triangle"));
   }
   syncPartEditorHeights();
 }

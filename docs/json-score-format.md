@@ -46,7 +46,7 @@ Each part has:
 | Field | Type | Notes |
 | --- | --- | --- |
 | `name` | string | Display name in the UI. |
-| `timbre` | string or object | Preset name or custom mix. See [timbre.md](timbre.md). |
+| `timbre` | string or object | Preset name, custom mix, or custom partials. See [timbre.md](timbre.md). |
 | `score` | string or array of strings | The compact note syntax. The UI saves this as an array of lines. |
 
 Recommended part names for four-part music are `soprano`, `alto`, `tenor`,
@@ -92,6 +92,33 @@ Custom mixes are also supported:
   }
 }
 ```
+
+For additive synthesis, use `partials` instead of `mix`:
+
+```json
+{
+  "preset": "custom",
+  "partials": [1.0, 0.55, 0.35, 0.25, 0.18, 0.12, 0.08, 0.05],
+  "filter": {
+    "highpass": 120,
+    "lowpass": 4500
+  },
+  "noise": 0.02,
+  "envelope": {
+    "attack_ms": 25,
+    "decay_ms": 60,
+    "sustain": 0.9,
+    "release_ms": 120
+  },
+  "vibrato": {
+    "depth": 0
+  }
+}
+```
+
+`mix` and `partials` are mutually exclusive. `filter`, `noise`, `envelope`, and
+`vibrato` are optional. Omit `highpass` or `lowpass` when that filter is not
+used; do not use fake cutoff values like `lowpass: 0`.
 
 ## Score Syntax
 
@@ -197,6 +224,8 @@ When asking an AI model to generate a WaveMusic score, give it these rules:
 - Barlines are optional. Omit them when notes span measures.
 - Do not invent unsupported fields for dynamics, lyrics, articulations, or
   ornaments unless the code has added support for them.
+- For custom timbre, use either `mix` or `partials`, not both.
+- If using filters, make `lowpass` higher than `highpass`.
 
 Prompt template:
 
@@ -215,6 +244,13 @@ Schema:
 Timbre presets:
 sine, square, triangle, saw, soft organ, bright organ, reed organ,
 mellow organ, string organ, warm synth organ.
+
+Custom timbre:
+- Use either mix {sine, square, triangle, saw} or partials [harmonic amplitudes].
+- Optional filter may contain highpass and/or lowpass cutoff Hz.
+- Optional envelope is attack_ms, decay_ms, sustain, release_ms.
+- Optional vibrato is {depth}; depth is semitones.
+- Optional noise is 0..1.
 
 Score syntax:
 Tokens are <length><note><octave>. Length is in sixteenth-note units.
