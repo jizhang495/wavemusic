@@ -1,0 +1,62 @@
+{
+  "title": "if ye love me",
+  "key": "c major",
+  "time_signature": "2/2",
+  "bpm": 96,
+  "sample_rate": 44100,
+  "transpose": 0,
+  "parts": [
+    {
+      "name": "alto i",
+      "timbre": "reed organ",
+      "score": [
+        "12c4 4c | 8d 12e | 4e d c | 8f e",
+        "4r e e e | 8g 4f 8e | 4d 8e | 16r",
+        "4r d c c | 12f 8e | 4c e 8d | c 4b3",
+        "8c4 r | 16r | r | 4r c 12g",
+        "4f e d | c e 8d | d r | 16r",
+        "4r 8g 4c | g f 8e | 4d c b3 a | g 8c4 4g3",
+        "a f 8g | g r | 16g"
+      ]
+    },
+    {
+      "name": "alto ii",
+      "timbre": "bright organ",
+      "score": [
+        "12g3 4a | 8b 12c4 | 4c b3 a | 8c4 16c",
+        "8r | 16r | 4r a3 a a | 8c4 4b3 8a",
+        "4g a a | f f 8c4 | 4c g3 c4 b3 | a f 6g 2g |",
+        "8g r | r c4 | 12f 4e | d c c b3",
+        "8c4 4c g3 | a a 8a | b b | 4b 8e4 4d |",
+        "2d c 4c r 8c | 4f3 c4 c | b3 8g4 4c | g f e 6d |",
+        "2c 8c 4b3 | 8c4 r | 16c"
+      ]
+    },
+    {
+      "name": "tenor",
+      "timbre": "soft organ",
+      "score": [
+        "12e3 4c | 8g 12g | 4g g e | 8a 16g",
+        "4r e | e e 6a 2g | 8f 16e | 8r",
+        "r 4r f | d d 8a | 4g e 8g | 2f e 4c 6d 2d |",
+        "8c g | 12c4 4b3 | a g f g | g e d d",
+        "e a g d | e e 8f+ | 4g 8d4 4g3 | d4 c b3 a |",
+        "16g | 4e 8a g | 4c g f | e a g d |",
+        "e c d d | 8e g | 16e"
+      ]
+    },
+    {
+      "name": "bass",
+      "timbre": "mellow organ",
+      "score": [
+        "12c3 4a2 | 8g 12c3 | 4c g2 a | 8f 24c3",
+        "16r | 8r a2 | 4a a 6d3 2c",
+        "8b2 4a r | r d3 a2 a | 8c3 4c g2 | a a g g",
+        "8c3 r | c 12f | 4e d c | b2 c3 8g2",
+        "4c3 c c b2 | a a 8d3 | g2 4r 8g3 | 4c g f",
+        "8e 4c 6e | 2c 4d 8c | r 4r 8c | 4f2 c3 b2",
+        "a a g g | 8c3 r | 16c"
+      ]
+    }
+  ]
+}

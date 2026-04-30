@@ -2,7 +2,9 @@
 
 `.score` is the internal render format consumed by the C++ engine. It is not the
 user-facing project format. User, UI, and AI-generated music should be stored as
-JSON, then normalized by Python before rendering.
+JSON, then normalized by Python before rendering. See
+[json-score-format.md](json-score-format.md) for the user-facing JSON schema and
+AI generation guidance.
 
 The goal is to keep C++ concise and fast. Python should handle bad user input,
 missing fields, defaults, JSON validation, and project metadata. C++ should
@@ -64,7 +66,8 @@ Rules:
 - `octave` is optional after it has been established.
 - `note` is `a` through `g`, optionally followed by `+` or `-`.
 - `r` is a rest.
-- `|` is allowed as a visual barline and has no render effect.
+- `|` is allowed as a visual barline and has no render effect. It may be
+  omitted when a sustained note spans a measure boundary.
 - Whitespace separates tokens.
 - Python should emit lower-case notes and `mix ...:` headers.
 

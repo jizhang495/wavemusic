@@ -34,6 +34,10 @@ Current preset names:
 - `triangle`
 - `saw`
 - `soft organ`
+- `bright organ`
+- `reed organ`
+- `mellow organ`
+- `string organ`
 - `warm synth organ`
 
 For custom mixes, use an object:
@@ -81,30 +85,22 @@ louder. A mix of all zeros is silence.
 
 The organ presets are simple blends of those base waves:
 
-```json
-"soft organ": {
-  "sine": 0.55,
-  "square": 0.1,
-  "triangle": 0.35,
-  "saw": 0
-}
-```
-
-```json
-"warm synth organ": {
-  "sine": 0.4,
-  "square": 0.15,
-  "triangle": 0.3,
-  "saw": 0.15
-}
-```
+| Preset | Sine | Square | Triangle | Saw | Character |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `soft organ` | 0.55 | 0.10 | 0.35 | 0.00 | rounded and gentle |
+| `bright organ` | 0.30 | 0.20 | 0.20 | 0.30 | clearer edge and more upper harmonics |
+| `reed organ` | 0.20 | 0.45 | 0.10 | 0.25 | nasal, reedy, stronger odd harmonics |
+| `mellow organ` | 0.70 | 0.05 | 0.25 | 0.00 | smooth and low-fatigue |
+| `string organ` | 0.25 | 0.05 | 0.30 | 0.40 | brighter, more string-pad-like |
+| `warm synth organ` | 0.40 | 0.15 | 0.30 | 0.15 | balanced warm synth-organ tone |
 
 They are not physical instrument models. They are stable, simple tones that are
 easy to render quickly and tend to be comfortable for the ear.
 
 ## UI Visualization
 
-The UI's expandable `mix` section shows two plots.
+The UI's expandable `waveform` section shows the mix values, sliders, and two
+plots.
 
 ### Wave Plot
 

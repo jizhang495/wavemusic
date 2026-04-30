@@ -52,8 +52,9 @@ project metadata and per-part settings. `transpose` is a whole-number semitone
 offset applied at render time.
 
 `timbre` can be a simple preset name such as `sine`, `square`, `triangle`,
-`saw`, `soft organ`, or `warm synth organ`. For custom timbre, use a mix of the
-four base waves:
+`saw`, `soft organ`, `bright organ`, `reed organ`, `mellow organ`,
+`string organ`, or `warm synth organ`. For custom timbre, use a mix of the four
+base waves:
 
 ```json
 {
@@ -71,9 +72,11 @@ four base waves:
 }
 ```
 
-See [docs/timbre.md](docs/timbre.md) for the current mix-based timbre
-format, mix visualization, and future `partials`, `filter`, `noise`,
-`envelope`, and `vibrato` ideas.
+See [docs/json-score-format.md](docs/json-score-format.md) for the full JSON
+schema, note syntax, barline convention, and AI generation prompt guidance. See
+[docs/timbre.md](docs/timbre.md) for the current mix-based timbre format, mix
+visualization, and future `partials`, `filter`, `noise`, `envelope`, and
+`vibrato` ideas.
 
 JSON is the project format because it is explicit, easy to validate, and maps
 directly to the web UI. It is also a better target for AI-generated music:

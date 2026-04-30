@@ -13,6 +13,10 @@ TIMBRE_PRESETS = {
     "triangle": {"sine": 0.0, "square": 0.0, "triangle": 1.0, "saw": 0.0},
     "saw": {"sine": 0.0, "square": 0.0, "triangle": 0.0, "saw": 1.0},
     "soft organ": {"sine": 0.55, "square": 0.10, "triangle": 0.35, "saw": 0.0},
+    "bright organ": {"sine": 0.30, "square": 0.20, "triangle": 0.20, "saw": 0.30},
+    "reed organ": {"sine": 0.20, "square": 0.45, "triangle": 0.10, "saw": 0.25},
+    "mellow organ": {"sine": 0.70, "square": 0.05, "triangle": 0.25, "saw": 0.0},
+    "string organ": {"sine": 0.25, "square": 0.05, "triangle": 0.30, "saw": 0.40},
     "warm synth organ": {
         "sine": 0.40,
         "square": 0.15,

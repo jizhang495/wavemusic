@@ -1,6 +1,17 @@
 import "./styles.css";
 
-type TimbrePreset = "sine" | "square" | "triangle" | "saw" | "soft organ" | "warm synth organ" | "custom";
+type TimbrePreset =
+  | "sine"
+  | "square"
+  | "triangle"
+  | "saw"
+  | "soft organ"
+  | "bright organ"
+  | "reed organ"
+  | "mellow organ"
+  | "string organ"
+  | "warm synth organ"
+  | "custom";
 
 type MixWeights = {
   sine: number;
@@ -92,6 +103,10 @@ const timbrePresets: TimbrePreset[] = [
   "triangle",
   "saw",
   "soft organ",
+  "bright organ",
+  "reed organ",
+  "mellow organ",
+  "string organ",
   "warm synth organ",
   "custom",
 ];
@@ -102,6 +117,10 @@ const presetMixes: Record<TimbrePreset, MixWeights> = {
   triangle: { sine: 0, square: 0, triangle: 1, saw: 0 },
   saw: { sine: 0, square: 0, triangle: 0, saw: 1 },
   "soft organ": { sine: 0.55, square: 0.1, triangle: 0.35, saw: 0 },
+  "bright organ": { sine: 0.3, square: 0.2, triangle: 0.2, saw: 0.3 },
+  "reed organ": { sine: 0.2, square: 0.45, triangle: 0.1, saw: 0.25 },
+  "mellow organ": { sine: 0.7, square: 0.05, triangle: 0.25, saw: 0 },
+  "string organ": { sine: 0.25, square: 0.05, triangle: 0.3, saw: 0.4 },
   "warm synth organ": { sine: 0.4, square: 0.15, triangle: 0.3, saw: 0.15 },
   custom: { sine: 0.4, square: 0.15, triangle: 0.3, saw: 0.15 },
 };
