@@ -125,8 +125,10 @@ interface ScorePayload {
 }
 
 type ElementRef = {
+  part: HTMLElement;
   name: HTMLInputElement;
   timbre: HTMLSelectElement;
+  muteButton: HTMLButtonElement;
   mixPanel: HTMLElement;
   mixDetails: HTMLDetailsElement;
   sourceInputs: Record<TimbreSource, HTMLInputElement>;
@@ -388,6 +390,17 @@ function setStatus(message: string) {
   statusElement.textContent = message;
 }
 
+function isPartMuted(ref: ElementRef): boolean {
+  return ref.muteButton.getAttribute("aria-pressed") === "true";
+}
+
+function setPartMuted(ref: ElementRef, muted: boolean) {
+  ref.muteButton.setAttribute("aria-pressed", String(muted));
+  ref.muteButton.classList.toggle("is-muted", muted);
+  ref.muteButton.title = muted ? "Unmute part" : "Mute part";
+  ref.part.classList.toggle("is-muted", muted);
+}
+
 function syncPartEditorHeights() {
   partRefs.forEach((ref) => {
     ref.score.style.height = `${state.partEditorHeight}px`;
@@ -413,12 +426,19 @@ function clampTranspose(value: number): number {
   return Math.trunc(value);
 }
 
-function partPayloads(): PartPayload[] {
-  return partRefs.map((ref, index) => ({
+function partPayload(ref: ElementRef, index: number): PartPayload {
+  return {
     name: ref.name.value.trim() || `part ${index + 1}`,
     timbre: timbrePayload(ref),
     score: ref.score.value.trim(),
-  }));
+  };
+}
+
+function renderPartPayloads(): PartPayload[] {
+  return partRefs
+    .map((ref, index) => ({ ref, index }))
+    .filter(({ ref }) => !isPartMuted(ref))
+    .map(({ ref, index }) => partPayload(ref, index));
 }
 
 function scoreLines(value: string): string[] {
@@ -447,8 +467,7 @@ function buildProject(): MusicProject {
     sample_rate: clampSampleRate(Number(sampleRateElement.value)),
     transpose: clampTranspose(Number(transposeElement.value)),
     parts: partRefs.map((ref, index) => ({
-      name: ref.name.value.trim() || `part ${index + 1}`,
-      timbre: timbrePayload(ref),
+      ...partPayload(ref, index),
       score: scoreLines(ref.score.value),
     })),
   };
@@ -1205,6 +1224,7 @@ function applyProject(project: Omit<ScorePayload, "filename">) {
     const ref = partRefs[index];
     const state = timbreState(part.timbre);
     ref.name.value = part.name || `part ${index + 1}`;
+    setPartMuted(ref, false);
     setTimbreControls(ref, state);
     setMixDetailsOpen(ref, state.preset === "custom");
     ref.score.value = part.score || "";
@@ -1216,7 +1236,7 @@ function getPayload(): RenderRequest {
     title: titleText(),
     key: keyElement.value.trim() || "c major",
     time_signature: timeSignatureElement.value.trim() || "4/4",
-    parts: partPayloads(),
+    parts: renderPartPayloads(),
     filename: filenameFromTitle(".wav"),
     sample_rate: clampSampleRate(Number(sampleRateElement.value)),
     bpm: clampBpm(Number(bpmElement.value)),
@@ -1422,6 +1442,14 @@ function renderPartInputs() {
       if (value === "triangle") option.selected = true;
       timbre.appendChild(option);
     });
+
+    const muteButton = document.createElement("button");
+    muteButton.type = "button";
+    muteButton.className = "mute-button";
+    muteButton.textContent = "M";
+    muteButton.ariaLabel = `Mute part ${i + 1}`;
+    muteButton.setAttribute("aria-pressed", "false");
+    muteButton.title = "Mute part";
 
     const mixPanel = document.createElement("div");
     mixPanel.className = "custom-mix";
@@ -1715,6 +1743,11 @@ function renderPartInputs() {
       }
     });
 
+    muteButton.addEventListener("click", () => {
+      const ref = partRefs[i];
+      setPartMuted(ref, !isPartMuted(ref));
+    });
+
     const textarea = document.createElement("textarea");
     textarea.placeholder = "Example: 2c 2d 2eb 2g | 2f 2g";
     textarea.value = "";
@@ -1740,6 +1773,7 @@ function renderPartInputs() {
 
     header.appendChild(name);
     header.appendChild(timbre);
+    header.appendChild(muteButton);
 
     section.appendChild(header);
     section.appendChild(mixPanel);
@@ -1747,8 +1781,10 @@ function renderPartInputs() {
     partsContainer.appendChild(section);
 
     partRefs.push({
+      part: section,
       name,
       timbre,
+      muteButton,
       mixPanel,
       mixDetails,
       sourceInputs,
@@ -1769,6 +1805,7 @@ function renderPartInputs() {
       spectrumCanvas,
       score: textarea,
     });
+    setPartMuted(partRefs[i], false);
     setTimbreControls(partRefs[i], timbreState("triangle"));
   }
   syncPartEditorHeights();
