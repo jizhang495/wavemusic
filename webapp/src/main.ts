@@ -296,6 +296,7 @@ const state = {
   selectedSheet: "",
   activePartIndex: 0,
   partEditorHeight: 300,
+  bpmTapTimes: [] as number[],
 };
 
 const container = document.createElement("div");
@@ -350,10 +351,13 @@ container.innerHTML = `
       <span>Time Signature</span>
       <input id="time-signature-input" value="4/4" placeholder="4/4" />
     </label>
-    <label>
+    <div class="bpm-field">
       <span>BPM</span>
-      <input id="bpm-input" type="number" min="20" max="300" value="100" />
-    </label>
+      <div class="bpm-input-row">
+        <input id="bpm-input" type="number" min="20" max="300" value="100" aria-label="BPM" />
+        <button id="tap-bpm" class="tap-bpm-button" type="button">Tap</button>
+      </div>
+    </div>
     <label>
       <span>Sample Rate</span>
       <input id="sample-rate" type="number" min="8000" max="96000" step="1000" value="44100" />
@@ -378,6 +382,7 @@ const statusElement = app.querySelector<HTMLElement>("#status")!;
 const sheetSelect = app.querySelector<HTMLSelectElement>("#sheet-select")!;
 const titleElement = app.querySelector<HTMLInputElement>("#title-input")!;
 const bpmElement = app.querySelector<HTMLInputElement>("#bpm-input")!;
+const tapBpmButton = app.querySelector<HTMLButtonElement>("#tap-bpm")!;
 const sampleRateElement = app.querySelector<HTMLInputElement>("#sample-rate")!;
 const transposeElement = app.querySelector<HTMLInputElement>("#transpose-input")!;
 const keyElement = app.querySelector<HTMLInputElement>("#key-input")!;
@@ -429,6 +434,31 @@ function clampBpm(value: number): number {
   if (!Number.isFinite(value) || value < 20) return 20;
   if (value > 300) return 300;
   return value;
+}
+
+function tapBpm() {
+  const now = performance.now();
+  const previousTap = state.bpmTapTimes[state.bpmTapTimes.length - 1];
+
+  if (previousTap === undefined || now - previousTap > 2500) {
+    state.bpmTapTimes = [now];
+    setStatus("Tap again to set BPM.");
+    return;
+  }
+
+  state.bpmTapTimes.push(now);
+  state.bpmTapTimes = state.bpmTapTimes.slice(-8);
+
+  const intervals = state.bpmTapTimes
+    .slice(1)
+    .map((tapTime, index) => tapTime - state.bpmTapTimes[index])
+    .filter((interval) => interval > 0);
+  const averageInterval =
+    intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length;
+  const bpm = Math.round(clampBpm(60000 / averageInterval));
+
+  bpmElement.value = String(bpm);
+  setStatus(`Tapped ${bpm} BPM (${state.bpmTapTimes.length} taps).`);
 }
 
 function clampTranspose(value: number): number {
@@ -1917,6 +1947,12 @@ loadScriptScoreButton.addEventListener("click", () => {
   } catch (error) {
     setStatus(error instanceof Error ? error.message : String(error));
   }
+});
+
+tapBpmButton.addEventListener("click", tapBpm);
+
+bpmElement.addEventListener("input", () => {
+  state.bpmTapTimes = [];
 });
 
 copyAiPromptButton.addEventListener("click", () => {

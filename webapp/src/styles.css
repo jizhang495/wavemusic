@@ -77,10 +77,11 @@ body {
 }
 
 .settings-row {
-  grid-template-columns: minmax(135px, 170px) minmax(90px, 110px) minmax(105px, 125px) minmax(75px, 85px) minmax(110px, 125px) minmax(80px, 95px) minmax(95px, 115px) minmax(90px, 110px);
+  grid-template-columns: minmax(135px, 170px) minmax(90px, 110px) minmax(105px, 125px) minmax(120px, 140px) minmax(110px, 125px) minmax(80px, 95px) minmax(95px, 115px) minmax(90px, 110px);
 }
 
-.toolbar label {
+.toolbar label,
+.bpm-field {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -107,6 +108,17 @@ body {
 
 .toolbar button:hover {
   background: #f3f4f6;
+}
+
+.bpm-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 52px;
+  gap: 0.4rem;
+}
+
+.toolbar .tap-bpm-button {
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
 }
 
 .script-loader-panel {
@@ -398,6 +410,10 @@ body {
 @media (max-width: 980px) {
   .score-row {
     grid-template-columns: minmax(0, 1fr) minmax(145px, 180px);
+  }
+
+  .settings-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .status-field,
