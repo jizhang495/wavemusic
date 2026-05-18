@@ -317,9 +317,17 @@ container.innerHTML = `
     <button id="load-sheet" type="button">Load sample</button>
     <button id="load-local-score" type="button">Load from local</button>
     <input id="local-score-file" type="file" accept=".json,application/json" hidden />
+    <button id="toggle-script-loader" type="button" aria-expanded="false" aria-controls="script-loader-panel">Load from script</button>
     <div class="status-field">
       <span>Status</span>
       <span id="status" class="status">Idle</span>
+    </div>
+    <div id="script-loader-panel" class="script-loader-panel" hidden>
+      <label class="script-json-field">
+        <span>JSON text</span>
+        <textarea id="script-score-json" placeholder="Paste WaveMusic JSON from AI"></textarea>
+      </label>
+      <button id="load-script-score" type="button">Load JSON</button>
     </div>
   </section>
   <section class="toolbar ai-row">
@@ -378,6 +386,10 @@ const audioPlayer = app.querySelector<HTMLAudioElement>("#audio-player")!;
 const loadButton = app.querySelector<HTMLButtonElement>("#load-sheet")!;
 const localScoreButton = app.querySelector<HTMLButtonElement>("#load-local-score")!;
 const localScoreFileInput = app.querySelector<HTMLInputElement>("#local-score-file")!;
+const scriptLoaderToggle = app.querySelector<HTMLButtonElement>("#toggle-script-loader")!;
+const scriptLoaderPanel = app.querySelector<HTMLElement>("#script-loader-panel")!;
+const scriptScoreJson = app.querySelector<HTMLTextAreaElement>("#script-score-json")!;
+const loadScriptScoreButton = app.querySelector<HTMLButtonElement>("#load-script-score")!;
 const aiPromptElement = app.querySelector<HTMLInputElement>("#ai-prompt")!;
 const copyAiPromptButton = app.querySelector<HTMLButtonElement>("#copy-ai-prompt")!;
 const previewButton = app.querySelector<HTMLButtonElement>("#preview-line")!;
@@ -1348,6 +1360,45 @@ async function loadLocalScore() {
   setStatus(`Loaded local ${file.name}`);
 }
 
+function setScriptLoaderOpen(open: boolean) {
+  scriptLoaderPanel.hidden = !open;
+  scriptLoaderToggle.setAttribute("aria-expanded", String(open));
+  if (open) {
+    requestAnimationFrame(() => scriptScoreJson.focus());
+  }
+}
+
+function scriptJsonText(value: string): string {
+  const text = value.trim();
+  const fenced = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return (fenced?.[1] ?? text).trim();
+}
+
+function parseScriptProjectJson(value: string): unknown {
+  const text = scriptJsonText(value);
+  if (!text) {
+    throw new Error("Paste JSON text first.");
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Script JSON is invalid: ${detail}`);
+  }
+}
+
+function loadScriptScore() {
+  const project = normalizeProject(
+    parseScriptProjectJson(scriptScoreJson.value),
+    "script_score",
+  );
+  applyProject(project);
+  state.selectedSheet = "";
+  sheetSelect.value = "";
+  setStatus(`Loaded script ${project.title}`);
+}
+
 async function saveSheet() {
   const filename = filenameFromTitle(".json");
   const blob = new Blob(
@@ -1854,6 +1905,18 @@ localScoreButton.addEventListener("click", () => {
 
 localScoreFileInput.addEventListener("change", () => {
   loadLocalScore().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+});
+
+scriptLoaderToggle.addEventListener("click", () => {
+  setScriptLoaderOpen(scriptLoaderPanel.hidden);
+});
+
+loadScriptScoreButton.addEventListener("click", () => {
+  try {
+    loadScriptScore();
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : String(error));
+  }
 });
 
 copyAiPromptButton.addEventListener("click", () => {

@@ -69,7 +69,7 @@ body {
 }
 
 .score-row {
-  grid-template-columns: minmax(220px, 1fr) minmax(160px, 180px) minmax(150px, 170px) minmax(180px, 1fr);
+  grid-template-columns: minmax(170px, 260px) minmax(145px, 180px) minmax(145px, 170px) minmax(145px, 180px) minmax(180px, 1fr);
 }
 
 .ai-row {
@@ -89,6 +89,7 @@ body {
 
 .toolbar input,
 .toolbar select,
+.toolbar textarea,
 .toolbar button {
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -106,6 +107,25 @@ body {
 
 .toolbar button:hover {
   background: #f3f4f6;
+}
+
+.script-loader-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(120px, 150px);
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.script-loader-panel[hidden] {
+  display: none;
+}
+
+.script-json-field textarea {
+  min-height: 8rem;
+  resize: vertical;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  line-height: 1.35;
 }
 
 .status-field {
@@ -375,6 +395,17 @@ body {
   background-color: #f1f5f9;
 }
 
+@media (max-width: 980px) {
+  .score-row {
+    grid-template-columns: minmax(0, 1fr) minmax(145px, 180px);
+  }
+
+  .status-field,
+  .script-loader-panel {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 768px) {
   .app-header {
     align-items: flex-start;
@@ -382,6 +413,7 @@ body {
 
   .toolbar,
   .score-row,
+  .script-loader-panel,
   .settings-row,
   .playback-bar {
     grid-template-columns: 1fr;
