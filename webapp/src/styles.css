@@ -34,8 +34,22 @@ body {
 }
 
 .title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   margin: 0 0 0.5rem;
   font-size: clamp(1.6rem, 3vw, 2.4rem);
+}
+
+.brand-logo {
+  width: 2.6rem;
+  height: auto;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .subtitle {

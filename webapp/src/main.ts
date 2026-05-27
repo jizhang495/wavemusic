@@ -303,7 +303,12 @@ const container = document.createElement("div");
 container.innerHTML = `
   <header class="app-header">
     <div>
-      <h1 class="title">WaveMusic</h1>
+      <h1 class="title">
+        <svg class="brand-logo" viewBox="0 0 42 20" aria-hidden="true">
+          <path d="M2 4 C5 4 6.6 16 9.6 16 C12.6 16 14.2 4 17.2 4 C20.2 4 21.8 16 24.8 16 C27.8 16 29.4 4 32.4 4 C35.4 4 37 16 40 16" />
+        </svg>
+        <span>WaveMusic</span>
+      </h1>
       <p class="subtitle">Create scores with abc's, and render WAV audio.</p>
     </div>
     <a class="github-link" href="https://github.com/jizhang495/wavemusic" target="_blank" rel="noreferrer">GitHub</a>
