@@ -1668,6 +1668,7 @@ function renderPartInputs() {
     const mixSummary = document.createElement("summary");
     mixSummary.textContent = "timbre";
     mixDetails.appendChild(mixSummary);
+    mixDetails.appendChild(createTimbreKeyboard(i));
 
     const mixRow = document.createElement("label");
     mixRow.className = "source-row mix-values-row";
@@ -1930,7 +1931,6 @@ function renderPartInputs() {
       input.addEventListener("change", () => markTimbreCustom(partRefs[i]));
     });
     mixDetails.appendChild(advancedPanel);
-    mixDetails.appendChild(createTimbreKeyboard(i));
 
     mixDetails.addEventListener("toggle", () => {
       if (mixDetails.open) {
