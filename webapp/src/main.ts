@@ -64,6 +64,13 @@ type TimbreObject = {
 
 type Timbre = TimbrePreset | TimbreObject;
 
+type TimbreKeyboardKey = {
+  label: string;
+  scoreToken: string;
+  kind: "white" | "black";
+  column: string;
+};
+
 interface PartPayload {
   name: string;
   timbre: Timbre;
@@ -176,6 +183,32 @@ const defaultEnvelope: EnvelopeSettings = {
   sustain: 1,
   release_ms: 20,
 };
+const timbreKeyboardKeys: TimbreKeyboardKey[] = [
+  { label: "F3", scoreToken: "f3", kind: "white", column: "1 / 3" },
+  { label: "F#3", scoreToken: "f+3", kind: "black", column: "2 / 4" },
+  { label: "G3", scoreToken: "g3", kind: "white", column: "3 / 5" },
+  { label: "G#3", scoreToken: "g+3", kind: "black", column: "4 / 6" },
+  { label: "A3", scoreToken: "a3", kind: "white", column: "5 / 7" },
+  { label: "A#3", scoreToken: "a+3", kind: "black", column: "6 / 8" },
+  { label: "B3", scoreToken: "b3", kind: "white", column: "7 / 9" },
+  { label: "C4", scoreToken: "c4", kind: "white", column: "9 / 11" },
+  { label: "C#4", scoreToken: "c+4", kind: "black", column: "10 / 12" },
+  { label: "D4", scoreToken: "d4", kind: "white", column: "11 / 13" },
+  { label: "D#4", scoreToken: "d+4", kind: "black", column: "12 / 14" },
+  { label: "E4", scoreToken: "e4", kind: "white", column: "13 / 15" },
+  { label: "F4", scoreToken: "f4", kind: "white", column: "15 / 17" },
+  { label: "F#4", scoreToken: "f+4", kind: "black", column: "16 / 18" },
+  { label: "G4", scoreToken: "g4", kind: "white", column: "17 / 19" },
+  { label: "G#4", scoreToken: "g+4", kind: "black", column: "18 / 20" },
+  { label: "A4", scoreToken: "a4", kind: "white", column: "19 / 21" },
+  { label: "A#4", scoreToken: "a+4", kind: "black", column: "20 / 22" },
+  { label: "B4", scoreToken: "b4", kind: "white", column: "21 / 23" },
+  { label: "C5", scoreToken: "c5", kind: "white", column: "23 / 25" },
+  { label: "C#5", scoreToken: "c+5", kind: "black", column: "24 / 26" },
+  { label: "D5", scoreToken: "d5", kind: "white", column: "25 / 27" },
+  { label: "D#5", scoreToken: "d+5", kind: "black", column: "26 / 28" },
+  { label: "E5", scoreToken: "e5", kind: "white", column: "27 / 29" },
+];
 const referencePlotFrequency = 440;
 const defaultMix: MixWeights = { sine: 0.4, square: 0.15, triangle: 0.3, saw: 0.15 };
 const presetTimbres: Record<TimbrePreset, PresetTimbre> = {
@@ -297,6 +330,8 @@ const state = {
   activePartIndex: 0,
   partEditorHeight: 300,
   bpmTapTimes: [] as number[],
+  timbrePreviewId: 0,
+  activeTimbreKey: null as HTMLButtonElement | null,
 };
 
 const container = document.createElement("div");
@@ -1507,6 +1542,93 @@ function renderWavWithStatus() {
   renderWav().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
 }
 
+function clearActiveTimbreKey() {
+  if (!state.activeTimbreKey) {
+    return;
+  }
+  state.activeTimbreKey.classList.remove("is-active");
+  state.activeTimbreKey.setAttribute("aria-pressed", "false");
+  state.activeTimbreKey = null;
+}
+
+function setActiveTimbreKey(button: HTMLButtonElement) {
+  clearActiveTimbreKey();
+  state.activeTimbreKey = button;
+  button.classList.add("is-active");
+  button.setAttribute("aria-pressed", "true");
+}
+
+async function playTimbreKeyboardNote(
+  partIndex: number,
+  key: TimbreKeyboardKey,
+  button: HTMLButtonElement,
+) {
+  const previewId = state.timbrePreviewId + 1;
+  state.timbrePreviewId = previewId;
+  state.activePartIndex = partIndex;
+  setActiveTimbreKey(button);
+  audioPlayer.pause();
+
+  const payload: PreviewRequest = {
+    timbre: timbrePayload(partRefs[partIndex]),
+    line: `4${key.scoreToken}`,
+    sample_rate: clampSampleRate(Number(sampleRateElement.value)),
+    bpm: clampBpm(Number(bpmElement.value)),
+    transpose: clampTranspose(Number(transposeElement.value)),
+    use_cpp: true,
+  };
+
+  try {
+    const response = await apiPost<RenderResponse>("/api/preview-line", payload);
+    if (state.timbrePreviewId !== previewId) {
+      return;
+    }
+    audioPlayer.src = audioUrlWithCache(response.audio_url);
+    audioPlayer.addEventListener(
+      "ended",
+      () => {
+        if (state.timbrePreviewId === previewId) {
+          clearActiveTimbreKey();
+        }
+      },
+      { once: true },
+    );
+    audioPlayer.play().catch(() => {
+      if (state.timbrePreviewId === previewId) {
+        clearActiveTimbreKey();
+      }
+    });
+    setStatus(`Played ${key.label} for part ${partIndex + 1}`);
+  } catch (error) {
+    if (state.timbrePreviewId === previewId) {
+      clearActiveTimbreKey();
+      setStatus(error instanceof Error ? error.message : String(error));
+    }
+  }
+}
+
+function createTimbreKeyboard(partIndex: number): HTMLElement {
+  const keyboard = document.createElement("div");
+  keyboard.className = "timbre-keyboard";
+  keyboard.setAttribute("role", "group");
+  keyboard.ariaLabel = `Test timbre notes for part ${partIndex + 1}`;
+
+  timbreKeyboardKeys.forEach((key) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `timbre-key ${key.kind}`;
+    button.style.gridColumn = key.column;
+    button.setAttribute("aria-pressed", "false");
+    button.ariaLabel = `Play ${key.label}`;
+    button.addEventListener("click", () => {
+      void playTimbreKeyboardNote(partIndex, key, button);
+    });
+    keyboard.appendChild(button);
+  });
+
+  return keyboard;
+}
+
 function renderPartInputs() {
   for (let i = 0; i < 4; i += 1) {
     const section = document.createElement("section");
@@ -1808,6 +1930,7 @@ function renderPartInputs() {
       input.addEventListener("change", () => markTimbreCustom(partRefs[i]));
     });
     mixDetails.appendChild(advancedPanel);
+    mixDetails.appendChild(createTimbreKeyboard(i));
 
     mixDetails.addEventListener("toggle", () => {
       if (mixDetails.open) {

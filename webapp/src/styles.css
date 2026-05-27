@@ -398,6 +398,69 @@ body {
   gap: 0.45rem;
 }
 
+.timbre-keyboard {
+  display: grid;
+  grid-template-columns: repeat(28, minmax(0, 1fr));
+  grid-template-rows: 1.65rem 1.85rem;
+  isolation: isolate;
+  margin-top: 0.65rem;
+  min-width: 0;
+}
+
+.timbre-key {
+  display: flex;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  padding: 0;
+}
+
+.timbre-key:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.timbre-key.white {
+  grid-row: 1 / 3;
+  align-items: flex-end;
+  min-height: 3.5rem;
+  margin-left: -1px;
+  background: #ffffff;
+  color: #111827;
+  border-radius: 0 0 5px 5px;
+  z-index: 1;
+}
+
+.timbre-key.white:first-child {
+  margin-left: 0;
+}
+
+.timbre-key.black {
+  grid-row: 1 / 2;
+  align-items: center;
+  height: 2rem;
+  margin: 0 12%;
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
+  border-radius: 0 0 4px 4px;
+  z-index: 2;
+}
+
+.timbre-key.white:hover,
+.timbre-key.white.is-active {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.timbre-key.black:hover,
+.timbre-key.black.is-active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
 .parts-resize-handle {
   display: flex;
   justify-content: center;
