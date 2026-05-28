@@ -358,25 +358,27 @@ container.innerHTML = `
     <button id="load-sheet" type="button">Load sample</button>
     <button id="load-local-score" type="button">Load from local</button>
     <input id="local-score-file" type="file" accept=".json,application/json" hidden />
-    <button id="toggle-script-loader" type="button" aria-expanded="false" aria-controls="script-loader-panel">Load from script</button>
     <div class="status-field">
       <span>Status</span>
       <span id="status" class="status">Idle</span>
     </div>
-    <div id="script-loader-panel" class="script-loader-panel" hidden>
-      <label class="script-json-field">
-        <span>JSON text</span>
-        <textarea id="script-score-json" placeholder="Paste WaveMusic JSON from AI"></textarea>
-      </label>
-      <button id="load-script-score" type="button">Load JSON</button>
-    </div>
   </section>
-  <section class="toolbar ai-row">
-    <label class="ai-prompt-field">
-      <span>Generate with AI</span>
-      <input id="ai-prompt" placeholder="Describe your music" />
-    </label>
-    <button id="copy-ai-prompt" type="button">Copy prompt</button>
+  <section class="ai-section">
+    <details class="ai-details">
+      <summary>Generate with AI</summary>
+      <div class="ai-panel">
+        <label class="ai-prompt-field">
+          <span>Prompt</span>
+          <input id="ai-prompt" placeholder="Describe your music" />
+        </label>
+        <button id="copy-ai-prompt" type="button">Copy prompt</button>
+        <label class="script-json-field">
+          <span>JSON text</span>
+          <textarea id="script-score-json" placeholder="Paste WaveMusic JSON from AI"></textarea>
+        </label>
+        <button id="load-script-score" type="button">Load JSON</button>
+      </div>
+    </details>
   </section>
   <section class="toolbar settings-row">
     <label>
@@ -431,8 +433,6 @@ const audioPlayer = app.querySelector<HTMLAudioElement>("#audio-player")!;
 const loadButton = app.querySelector<HTMLButtonElement>("#load-sheet")!;
 const localScoreButton = app.querySelector<HTMLButtonElement>("#load-local-score")!;
 const localScoreFileInput = app.querySelector<HTMLInputElement>("#local-score-file")!;
-const scriptLoaderToggle = app.querySelector<HTMLButtonElement>("#toggle-script-loader")!;
-const scriptLoaderPanel = app.querySelector<HTMLElement>("#script-loader-panel")!;
 const scriptScoreJson = app.querySelector<HTMLTextAreaElement>("#script-score-json")!;
 const loadScriptScoreButton = app.querySelector<HTMLButtonElement>("#load-script-score")!;
 const aiPromptElement = app.querySelector<HTMLInputElement>("#ai-prompt")!;
@@ -1430,14 +1430,6 @@ async function loadLocalScore() {
   setStatus(`Loaded local ${file.name}`);
 }
 
-function setScriptLoaderOpen(open: boolean) {
-  scriptLoaderPanel.hidden = !open;
-  scriptLoaderToggle.setAttribute("aria-expanded", String(open));
-  if (open) {
-    requestAnimationFrame(() => scriptScoreJson.focus());
-  }
-}
-
 function scriptJsonText(value: string): string {
   const text = value.trim();
   const fenced = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
@@ -2063,10 +2055,6 @@ localScoreButton.addEventListener("click", () => {
 
 localScoreFileInput.addEventListener("change", () => {
   loadLocalScore().catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
-});
-
-scriptLoaderToggle.addEventListener("click", () => {
-  setScriptLoaderOpen(scriptLoaderPanel.hidden);
 });
 
 loadScriptScoreButton.addEventListener("click", () => {
