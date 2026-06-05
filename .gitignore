@@ -31,3 +31,6 @@ webapp/.vite/
 build/
 dist/
 *.egg-info/
+
+# Scratch / reference downloads
+scratch/
